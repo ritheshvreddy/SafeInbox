@@ -1,0 +1,31 @@
+# Local Jenkins for SafeInbox CI/CD.
+#   cd ci/jenkins
+#   copy .env.example .env      (set the admin password and Google client ID)
+#   docker compose up -d --build       -> open http://localhost:8080
+# On first start Jenkins creates the admin user, the Google client ID credential and the
+# "SafeInbox" pipeline job, which checks GitHub every 5 minutes and deploys new commits.
+# Runs as root only so it can use the mounted Docker socket - fine for a local machine, not a shared server.
+name: safeinbox-jenkins
+
+services:
+  jenkins:
+    build: .
+    image: safeinbox-jenkins:latest
+    container_name: safeinbox-jenkins
+    user: root
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      JENKINS_ADMIN_USER: ${JENKINS_ADMIN_USER:-admin}
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:?Set JENKINS_ADMIN_PASSWORD in ci/jenkins/.env}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?Set GOOGLE_CLIENT_ID in ci/jenkins/.env}
+      SAFEINBOX_ADMIN_EMAILS: ${SAFEINBOX_ADMIN_EMAILS:-}
+      SAFEINBOX_REPO_URL: ${SAFEINBOX_REPO_URL:-https://github.com/ritheshvreddy/SafeInbox.git}
+      SAFEINBOX_BRANCH: ${SAFEINBOX_BRANCH:-main}
+    volumes:
+      - jenkins-home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  jenkins-home:

@@ -1,1 +1,15 @@
 @import "tailwindcss";
+
+/* Dark mode is toggled with the moon/sun button (adds the "dark" class to <html>). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+html {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}

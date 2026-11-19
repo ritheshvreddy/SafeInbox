@@ -1,37 +1,66 @@
-version: '3.8'
+# SafeInbox: MongoDB + Flask backend + React frontend (served by nginx).
+#   docker compose up -d --build      -> open http://localhost:3000
+# Settings come from a .env file next to this one (copy .env.example).
+
+# Fixed project name so manual runs and Jenkins deployments manage the same containers.
+name: safeinbox
 
 services:
-  flask-app:
-    build: ./spam-sniffer-backend
-    container_name: flask-app
-    ports:
-      - "5000:5000"
-    environment:
-      - MONGO_URI=mongodb://mongo:27017
-      - GOOGLE_CLIENT_SECRET=your_google_client_secret_file
-    depends_on:
-      - mongo
-    volumes:
-      - ./spam-sniffer-backend:/app
-
   mongo:
-    image: mongo:latest
-    container_name: mongo
+    image: mongo:7.0
+    container_name: safeinbox-mongo
+    restart: unless-stopped
     ports:
-      - "27017:27017"
+      # Published on 27018 so it doesn't clash with a MongoDB installed on your machine (27017).
+      # `python app.py` can use it with MONGO_URI=mongodb://localhost:27018/safeinbox
+      - "27018:27017"
     volumes:
       - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
 
-  react-app:
-    build: ./frontend
-    container_name: react-app
+  backend:
+    build:
+      context: ./safeinbox-backend
+      target: runtime
+    image: safeinbox-backend:latest
+    container_name: safeinbox-backend
+    restart: unless-stopped
+    environment:
+      MONGO_URI: mongodb://mongo:27017/safeinbox
+      MONGO_FALLBACK_TO_MEMORY: "false"
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?Set GOOGLE_CLIENT_ID in .env}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:-}
+      SECRET_KEY: ${SECRET_KEY:-}
+      DATA_RETENTION_DAYS: ${DATA_RETENTION_DAYS:-30}
+      CORS_ORIGINS: http://localhost:3000
     ports:
-      - "3000:3000"
-    depends_on:
-      - flask-app
+      - "5000:5000"
     volumes:
-      - ./frontend:/app
+      - backend-instance:/app/instance   # generated keys + retrained models survive restarts
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      target: runtime
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?Set GOOGLE_CLIENT_ID in .env}
+    image: safeinbox-frontend:latest
+    container_name: safeinbox-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
 
 volumes:
   mongo-data:
-    driver: local
+  backend-instance:

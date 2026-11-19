@@ -26,3 +26,11 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+# SafeInbox runtime data (generated keys, retrained models)
+instance/

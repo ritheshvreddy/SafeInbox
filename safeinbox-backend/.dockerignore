@@ -1,0 +1,21 @@
+# Python cache and virtual environments
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+.pytest_cache/
+
+# Local secrets, keys and retrained models (the container gets its own via env vars / volume)
+.env
+instance/
+
+# Notebooks are not needed in the image
+*.ipynb
+
+# OS / VCS files
+.DS_Store
+Thumbs.db
+.git
+.gitignore
+*.log
