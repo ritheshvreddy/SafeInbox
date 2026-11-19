@@ -1,0 +1,42 @@
+# Render Blueprint for the SafeInbox backend (free plan).
+# Render dashboard -> New -> Blueprint -> pick this repository. Render asks for the values marked `sync: false`.
+services:
+  - type: web
+    name: safeinbox-backend
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerContext: ./safeinbox-backend
+    dockerfilePath: ./safeinbox-backend/Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # MongoDB Atlas connection string, e.g. mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/safeinbox
+      - key: MONGO_URI
+        sync: false
+      # Google OAuth client ID (same as the frontend's VITE_GOOGLE_CLIENT_ID)
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      # Accounts with the admin role (comma-separated)
+      - key: ADMIN_EMAILS
+        sync: false
+      # Your Vercel address, e.g. https://safeinbox.vercel.app (browser requests are only accepted from here)
+      - key: CORS_ORIGINS
+        sync: false
+      # Base64 32-byte AES-256 key. Keep a copy: if it changes, stored data can no longer be decrypted.
+      - key: DATA_ENCRYPTION_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: REQUIRE_KEYS
+        value: "true"
+      - key: MONGO_FALLBACK_TO_MEMORY
+        value: "false"
+      # Google's Limited Use policy: don't keep Gmail text for training shared models in a public app.
+      - key: STORE_FEEDBACK_TEXT
+        value: "false"
+      # The free plan has 512 MB of memory - one worker process fits comfortably.
+      - key: WEB_CONCURRENCY
+        value: "1"
+      - key: DATA_RETENTION_DAYS
+        value: "30"

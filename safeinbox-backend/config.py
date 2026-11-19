@@ -71,12 +71,26 @@ def load_config(overrides=None):
         "DATA_RETENTION_DAYS": int(os.getenv("DATA_RETENTION_DAYS", 30)),
         "DATASET_PATH": Path(os.getenv("DATASET_PATH", BASE_DIR / "spam_ham_dataset.csv")),
         "BASE_MODEL_DIR": BASE_DIR,
-        "MODEL_DIR": instance_dir / "models",
         "MIN_RETRAIN_ACCURACY": float(os.getenv("MIN_RETRAIN_ACCURACY", 0.90)),
         "FEEDBACK_WEIGHT": float(os.getenv("FEEDBACK_WEIGHT", 5)),
+        # Keep the text of emails users report / mark as not spam so retraining can learn from them.
+        # Off by default: Google's Limited Use policy forbids training shared ML models on Gmail data
+        # in public apps. Only enable it for private demos.
+        "STORE_FEEDBACK_TEXT": _bool(os.getenv("STORE_FEEDBACK_TEXT"), default=False),
+        # Refuse to start without explicit keys (set on hosts without a permanent disk, e.g. Render).
+        "REQUIRE_KEYS": _bool(os.getenv("REQUIRE_KEYS"), default=False),
         "MAX_EMAILS_LIMIT": 50,
     }
     config.update(overrides)
+
+    if config["REQUIRE_KEYS"]:
+        missing = [name for name in ("SECRET_KEY", "DATA_ENCRYPTION_KEY")
+                   if name not in config and not os.getenv(name, "").strip()]
+        if missing:
+            raise RuntimeError(
+                f"{', '.join(missing)} must be set (REQUIRE_KEYS is on). Generated keys would be lost on restart "
+                "and stored data would become unreadable."
+            )
 
     if "SECRET_KEY" not in config:
         config["SECRET_KEY"] = _secret("SECRET_KEY", instance_dir, "secret_key", lambda: secrets.token_urlsafe(48))

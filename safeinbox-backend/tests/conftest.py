@@ -156,6 +156,7 @@ def app(tmp_path, gmail):
         "GOOGLE_TOKEN_VERIFIER": fake_verifier,
         "GMAIL_SERVICE_FACTORY": lambda token: gmail,
         "RETRAIN_SYNC": True,
+        "STORE_FEEDBACK_TEXT": True,
     })
     yield application
     if real_mongo:

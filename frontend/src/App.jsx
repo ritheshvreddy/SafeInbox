@@ -77,6 +77,7 @@ export default function App() {
   const [filter, setFilter] = useState("all");
   const [modal, setModal] = useState(null);
   const [retentionDays, setRetentionDays] = useState(30);
+  const [serverStatus, setServerStatus] = useState("checking");
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -149,12 +150,38 @@ export default function App() {
     [handleError, loadHistory]
   );
 
+  // Wake the backend early: on free hosting it sleeps when idle and can take up to a minute to start.
+  useEffect(() => {
+    let cancelled = false;
+    let attempts = 0;
+    const slowTimer = setTimeout(() => !cancelled && setServerStatus((s) => (s === "checking" ? "waking" : s)), 2500);
+    const check = async () => {
+      try {
+        const health = await api("/api/health");
+        if (cancelled) return;
+        setRetentionDays(health.retentionDays ?? 30);
+        setServerStatus("ok");
+      } catch {
+        if (cancelled) return;
+        attempts += 1;
+        if (attempts < 15) {
+          setServerStatus("waking");
+          setTimeout(check, 5000);
+        } else {
+          setServerStatus("down");
+        }
+      }
+    };
+    check();
+    return () => {
+      cancelled = true;
+      clearTimeout(slowTimer);
+    };
+  }, []);
+
   // Restore the session after a page reload.
   useEffect(() => {
     let cancelled = false;
-    api("/api/health")
-      .then((health) => !cancelled && setRetentionDays(health.retentionDays ?? 30))
-      .catch(() => {});
     if (!getSessionToken()) return undefined;
     (async () => {
       try {
@@ -296,7 +323,13 @@ export default function App() {
           <IconButton icon="info" label="About and privacy" onClick={() => setModal("info")} />
           {themeButton}
         </header>
-        <LoginScreen onLogin={login} busy={signingIn} error={loginError} retentionDays={retentionDays} />
+        <LoginScreen
+          onLogin={login}
+          busy={signingIn}
+          error={loginError}
+          retentionDays={retentionDays}
+          serverStatus={serverStatus}
+        />
         {modal === "info" && <InfoModal signedIn={false} retentionDays={retentionDays} onClose={() => setModal(null)} />}
       </div>
     );

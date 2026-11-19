@@ -2,6 +2,7 @@
 import os
 from datetime import timedelta
 
+from classifier import ModelStore
 from conftest import login
 from services import get_services, utcnow
 
@@ -205,6 +206,11 @@ def test_admin_retrain_uses_feedback_and_keeps_accuracy(client):
 
     health = client.get("/api/health").get_json()
     assert health["modelVersion"] == job["version"]
+    # The model lives in MongoDB, so a restarted server (new ModelStore) loads it too.
+    with client.application.app_context():
+        services = get_services()
+        restarted = ModelStore(client.application.config["BASE_MODEL_DIR"], services.db)
+        assert restarted.get().version == job["version"]
     # Cached analyses are re-scored with the new model without contacting Gmail again.
     emails = client.get("/api/emails?cached=1", headers=headers).get_json()["emails"]
     assert all(e["modelVersion"] == job["version"] for e in emails)

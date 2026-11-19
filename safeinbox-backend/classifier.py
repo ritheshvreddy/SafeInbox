@@ -1,17 +1,18 @@
 """Spam Classification Module: TF-IDF + Naive Bayes, with per-word explanations.
 
-The active model can be replaced at runtime by a retrained one (see training.py). Every
-process checks the model pointer file, so all server workers pick up a new model.
+The active model can be replaced at runtime by a retrained one (see training.py). Retrained
+models live in MongoDB, so every server process picks up a new model.
 """
-import json
+import io
 import logging
-import os
 import re
 import string
 import threading
+import time
 from pathlib import Path
 
 import joblib
+from bson.binary import Binary
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 
 log = logging.getLogger("safeinbox")
@@ -61,55 +62,87 @@ class SpamModel:
         }
 
 
-class ModelStore:
-    """Loads the active model and hot-swaps it when a retrained model is activated."""
+def _dumps(obj) -> bytes:
+    buffer = io.BytesIO()
+    joblib.dump(obj, buffer, compress=3)
+    return buffer.getvalue()
 
-    def __init__(self, base_dir, model_dir):
+
+def _loads(data: bytes):
+    return joblib.load(io.BytesIO(bytes(data)))
+
+
+class ModelStore:
+    """Loads the active model and hot-swaps it when a retrained model is activated.
+
+    Retrained models are stored in MongoDB (collection `models`, pointer in `settings`), so they
+    survive restarts on hosts without a permanent disk (e.g. Render) and every server worker
+    switches to a new model within CHECK_INTERVAL seconds.
+    """
+
+    CHECK_INTERVAL = 10  # seconds between checks for a newly activated model
+    KEEP_MODELS = 3
+
+    def __init__(self, base_dir, db):
         self.base_dir = Path(base_dir)
-        self.model_dir = Path(model_dir)
-        self.pointer = self.model_dir / "current.json"
+        self.db = db
         self._lock = threading.Lock()
         self._model = None
-        self._pointer_mtime = "unset"
+        self._base = None
+        self._checked_at = 0.0
 
-    def _pointer_state(self):
-        try:
-            return self.pointer.stat().st_mtime_ns
-        except FileNotFoundError:
-            return None
+    def _base_model(self):
+        if self._base is None:
+            self._base = SpamModel(joblib.load(self.base_dir / VECTORIZER_FILE),
+                                   joblib.load(self.base_dir / MODEL_FILE), BASE_VERSION)
+        return self._base
 
-    def _load(self):
-        if self.pointer.exists():
-            info = json.loads(self.pointer.read_text(encoding="utf-8"))
-            folder = self.model_dir / info["version"]
-            model = SpamModel(
-                joblib.load(folder / VECTORIZER_FILE), joblib.load(folder / MODEL_FILE), info["version"], info.get("metrics")
-            )
-            log.info("Loaded retrained spam model %s", model.version)
-            return model
-        return SpamModel(joblib.load(self.base_dir / VECTORIZER_FILE), joblib.load(self.base_dir / MODEL_FILE), BASE_VERSION)
+    def _active_version(self):
+        pointer = self.db.settings.find_one({"_id": "active_model"})
+        return pointer["version"] if pointer else BASE_VERSION
+
+    def _load(self, version):
+        if version == BASE_VERSION:
+            return self._base_model()
+        doc = self.db.models.find_one({"_id": version})
+        if not doc:
+            log.error("Active model %s is missing from the database - using the base model", version)
+            return self._base_model()
+        model = SpamModel(_loads(doc["vectorizer"]), _loads(doc["classifier"]), version, doc.get("metrics"))
+        log.info("Loaded retrained spam model %s", version)
+        return model
 
     def get(self) -> SpamModel:
-        state = self._pointer_state()
         with self._lock:
-            if self._model is None or state != self._pointer_mtime:
+            now = time.monotonic()
+            if self._model is None or now - self._checked_at >= self.CHECK_INTERVAL:
+                self._checked_at = now
                 try:
-                    self._model = self._load()
+                    version = self._active_version()
+                    if self._model is None or self._model.version != version:
+                        self._model = self._load(version)
                 except Exception:
                     if self._model is None:
                         raise
-                    log.exception("Could not load the new model - keeping %s", self._model.version)
-                self._pointer_mtime = state
+                    log.exception("Could not check for a new model - keeping %s", self._model.version)
             return self._model
 
     def save_and_activate(self, vectorizer, classifier, version, metrics):
-        folder = self.model_dir / version
-        folder.mkdir(parents=True, exist_ok=True)
-        joblib.dump(vectorizer, folder / VECTORIZER_FILE)
-        joblib.dump(classifier, folder / MODEL_FILE)
-        temp = self.pointer.with_suffix(".tmp")
-        temp.write_text(json.dumps({"version": version, "metrics": metrics}), encoding="utf-8")
-        os.replace(temp, self.pointer)
+        self.db.models.insert_one({
+            "_id": version, "vectorizer": Binary(_dumps(vectorizer)), "classifier": Binary(_dumps(classifier)),
+            "metrics": metrics, "created_at": time.time(),
+        })
+        self.db.settings.update_one({"_id": "active_model"}, {"$set": {"version": version}}, upsert=True)
+        # Keep only the newest few retrained models.
+        old = [d["_id"] for d in self.db.models.find({}, {"_id": 1}).sort("created_at", -1).skip(self.KEEP_MODELS)]
+        if old:
+            self.db.models.delete_many({"_id": {"$in": old}})
+        with self._lock:
+            self._model = SpamModel(vectorizer, classifier, version, metrics)
+            self._checked_at = time.monotonic()
 
     def reset_to_base(self):
-        self.pointer.unlink(missing_ok=True)
+        self.db.settings.delete_one({"_id": "active_model"})
+        with self._lock:
+            self._model = self._base_model()
+            self._checked_at = time.monotonic()

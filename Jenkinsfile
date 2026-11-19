@@ -92,6 +92,30 @@ pipeline {
                 '''
             }
         }
+
+        stage('Deploy to cloud') {
+            // Optional: only runs when deploy-hook credentials exist. Use it if you turned off auto-deploy
+            // in Render/Vercel so the public site is only updated after these tests pass.
+            when { expression { params.DEPLOY } }
+            steps {
+                script {
+                    def hooks = [
+                        [id: 'safeinbox-render-deploy-hook', name: 'Render (backend)'],
+                        [id: 'safeinbox-vercel-deploy-hook', name: 'Vercel (frontend)'],
+                    ]
+                    for (hook in hooks) {
+                        try {
+                            withCredentials([string(credentialsId: hook.id, variable: 'DEPLOY_HOOK_URL')]) {
+                                sh 'curl -fsS -X POST "$DEPLOY_HOOK_URL" > /dev/null'
+                            }
+                            echo "Triggered ${hook.name} deployment"
+                        } catch (org.jenkinsci.plugins.credentialsbinding.impl.CredentialNotFoundException ignored) {
+                            echo "No '${hook.id}' credential - ${hook.name} deploys on its own from GitHub"
+                        }
+                    }
+                }
+            }
+        }
     }
 
     post {

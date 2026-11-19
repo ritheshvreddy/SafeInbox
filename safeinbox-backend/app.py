@@ -39,7 +39,7 @@ def create_app(overrides=None):
     ensure_nltk_data()
     db, backend = database.connect(app.config["MONGO_URI"], app.config["MONGO_FALLBACK_TO_MEMORY"])
     database.ensure_indexes(db)
-    models = ModelStore(app.config["BASE_MODEL_DIR"], app.config["MODEL_DIR"])
+    models = ModelStore(app.config["BASE_MODEL_DIR"], db)
     models.get()  # load now so the first request is fast and a broken model fails at start-up
     app.extensions["safeinbox"] = Services(db=db, db_backend=backend,
                                            encryptor=Encryptor(app.config["DATA_ENCRYPTION_KEY"]), models=models)

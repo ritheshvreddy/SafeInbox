@@ -2,10 +2,32 @@
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="SafeInbox - AI spam and phishing checker for your Gmail inbox" />
-    <title>SafeInbox</title>
+    <title>SafeInbox - AI spam & phishing checker for Gmail</title>
+    <meta name="description" content="SafeInbox scans your unread Gmail emails and shows a spam score, a short summary, the reasons behind each decision and warnings for phishing links." />
+    <meta name="theme-color" content="#4338ca" />
+
+    <!-- Icons -->
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Social sharing (Open Graph / Twitter). __SITE_URL__ is replaced at build time (see vite.config.js). -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SafeInbox" />
+    <meta property="og:title" content="SafeInbox - AI spam & phishing checker for Gmail" />
+    <meta property="og:description" content="Spam scores, phishing alerts and short summaries for your unread Gmail emails." />
+    <meta property="og:url" content="__SITE_URL__/" />
+    <meta property="og:image" content="__SITE_URL__/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="SafeInbox logo: an envelope with a green check mark" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SafeInbox - AI spam & phishing checker for Gmail" />
+    <meta name="twitter:description" content="Spam scores, phishing alerts and short summaries for your unread Gmail emails." />
+    <meta name="twitter:image" content="__SITE_URL__/og-image.png" />
+
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>

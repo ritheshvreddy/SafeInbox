@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SafeInbox">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#4338ca"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e0e7ff"/>
+    </linearGradient>
+  </defs>
+  <!-- tile -->
+  <rect width="512" height="512" rx="116" fill="url(#tile)"/>
+  <!-- envelope -->
+  <rect x="84" y="138" width="316" height="226" rx="38" fill="url(#paper)"/>
+  <path d="M110 170 L242 262 L374 170" fill="none" stroke="#6366f1" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- safe badge -->
+  <circle cx="372" cy="356" r="92" fill="#10b981" stroke="#4338ca" stroke-width="22"/>
+  <path d="M328 357 L360 389 L418 329" fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

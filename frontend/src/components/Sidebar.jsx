@@ -1,16 +1,12 @@
 import { ACTION_TEXT, LABEL_STYLES, formatDate } from "../labels";
 import Icon from "./Icon";
+import Logo from "./Logo";
 import SpamChart from "./SpamChart";
 
 export default function Sidebar({ user, stats, history, onLogout, onOpenAdmin, onSelectHistory }) {
   return (
     <aside className="flex flex-col gap-6 border-b border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950 md:sticky md:top-0 md:h-screen md:w-72 md:shrink-0 md:overflow-y-auto md:border-r md:border-b-0">
-      <div className="flex items-center gap-2">
-        <span className="rounded-xl bg-blue-600 p-2 text-white">
-          <Icon name="shield" className="h-6 w-6" />
-        </span>
-        <span className="text-2xl font-bold tracking-tight">SafeInbox</span>
-      </div>
+      <Logo size={40} />
 
       <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-3 dark:border-emerald-700 dark:bg-emerald-900/20">
         <p className="text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-400">

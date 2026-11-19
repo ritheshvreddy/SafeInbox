@@ -26,9 +26,11 @@ RUN useradd --create-home --uid 10001 appuser \
  && chown -R appuser:appuser /app/instance
 USER appuser
 
+# PORT and WEB_CONCURRENCY can be set by the hosting platform (Render sets PORT; use 1 worker on 512 MB plans).
+ENV PORT=5000 \
+    WEB_CONCURRENCY=2
 EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/api/health', timeout=4)"
+  CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://127.0.0.1:{os.environ[\"PORT\"]}/api/health', timeout=4)"
 
-# One process with several threads keeps memory low; models hot-reload across workers anyway.
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--threads", "4", "--timeout", "120", "--access-logfile", "-", "wsgi:app"]
+CMD ["sh", "-c", "exec gunicorn --bind 0.0.0.0:${PORT} --workers ${WEB_CONCURRENCY} --threads 4 --timeout 120 --access-logfile - wsgi:app"]

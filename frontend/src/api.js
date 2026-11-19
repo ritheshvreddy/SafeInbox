@@ -1,4 +1,7 @@
-// Small fetch wrapper for the SafeInbox backend. All requests go to /api (proxied by Vite / nginx).
+// Small fetch wrapper for the SafeInbox backend.
+// Locally and in Docker, requests go to /api on the same site (proxied by Vite / nginx).
+// On Vercel, VITE_API_BASE_URL points at the backend on Render (e.g. https://safeinbox-backend.onrender.com).
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
 const SESSION_KEY = "safeinbox.session";
 
 export class ApiError extends Error {
@@ -34,7 +37,7 @@ export async function api(path, { method = "GET", body, raw = false } = {}) {
 
   let response;
   try {
-    response = await fetch(path, {
+    response = await fetch(API_BASE + path, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,

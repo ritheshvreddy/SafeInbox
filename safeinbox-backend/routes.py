@@ -214,12 +214,12 @@ def email_action(gmail_id):
 
     if action in ("report", "keep") and content["sender_email"]:
         set_sender_status(services, user["_id"], content["sender_email"], "blocked" if action == "report" else "trusted")
-        # Save the email as a labelled example so the model can learn from it when retrained.
+        # Record the decision. The email text is only kept for retraining when STORE_FEEDBACK_TEXT is on.
+        feedback = {"label": 1 if action == "report" else 0, "created_at": utcnow()}
+        if current_app.config["STORE_FEEDBACK_TEXT"]:
+            feedback["text_enc"] = services.encryptor.encrypt(f"{content['subject']}\n{content['body']}")
         services.db.feedback.update_one(
-            {"user_id": user["_id"], "gmail_id": gmail_id},
-            {"$set": {"label": 1 if action == "report" else 0, "created_at": utcnow(),
-                      "text_enc": services.encryptor.encrypt(f"{content['subject']}\n{content['body']}")}},
-            upsert=True,
+            {"user_id": user["_id"], "gmail_id": gmail_id}, {"$set": feedback}, upsert=True,
         )
     if action in ("read", "delete", "report"):
         services.db.users.update_one({"_id": user["_id"]}, {"$pull": {"current_unread": gmail_id}})

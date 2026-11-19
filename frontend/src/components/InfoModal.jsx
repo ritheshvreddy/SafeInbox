@@ -75,6 +75,17 @@ export default function InfoModal({ signedIn, retentionDays = 30, onClose, onAcc
             <li>SafeInbox never sends your emails anywhere else. Logging out revokes its Gmail access.</li>
             <li>You can download everything stored about you, or delete it, at any time (GDPR).</li>
           </ul>
+          <p className="mt-2">
+            Read the full{" "}
+            <a href="/privacy" target="_blank" rel="noreferrer" className="text-blue-700 underline dark:text-blue-300">
+              Privacy Policy
+            </a>{" "}
+            and{" "}
+            <a href="/terms" target="_blank" rel="noreferrer" className="text-blue-700 underline dark:text-blue-300">
+              Terms of Service
+            </a>
+            .
+          </p>
         </section>
 
         {signedIn && (

@@ -1,4 +1,5 @@
 import Icon from "./Icon";
+import Logo from "./Logo";
 
 const FEATURES = [
   ["shield", "Spam score for every unread email, with the reasons behind it"],
@@ -7,14 +8,12 @@ const FEATURES = [
   ["chat", "Ask the assistant: \"summary\", \"show spam\", \"any phishing?\""],
 ];
 
-export default function LoginScreen({ onLogin, busy, error, retentionDays }) {
+export default function LoginScreen({ onLogin, busy, error, retentionDays, serverStatus }) {
   return (
     <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-10">
       <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-800 sm:p-8">
         <div className="flex items-center gap-3">
-          <span className="rounded-xl bg-blue-600 p-2.5 text-white">
-            <Icon name="shield" className="h-7 w-7" />
-          </span>
+          <Logo size={56} withName={false} />
           <div>
             <h1 className="text-2xl font-bold">Welcome to SafeInbox</h1>
             <p className="text-sm text-slate-500 dark:text-slate-400">Your AI spam and phishing checker for Gmail</p>
@@ -29,6 +28,18 @@ export default function LoginScreen({ onLogin, busy, error, retentionDays }) {
             </li>
           ))}
         </ul>
+
+        {serverStatus === "waking" && (
+          <p className="mt-6 rounded-lg bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-500/10 dark:text-blue-200">
+            Starting the server… The free hosting plan sleeps when nobody is using it, so the first visit can take up
+            to a minute.
+          </p>
+        )}
+        {serverStatus === "down" && (
+          <p className="mt-6 rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
+            The SafeInbox server isn't responding right now. Please try again in a minute.
+          </p>
+        )}
 
         <button
           onClick={onLogin}
@@ -46,6 +57,15 @@ export default function LoginScreen({ onLogin, busy, error, retentionDays }) {
           By signing in you allow SafeInbox to read your unread Gmail emails and to mark, move or delete them when you
           click the buttons. Email content is stored encrypted (AES-256), deleted automatically after {retentionDays} days,
           and you can download or delete your data at any time from the ⓘ menu. Logging out revokes access.
+        </p>
+        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+          <a href="/privacy" className="underline hover:text-blue-600">
+            Privacy Policy
+          </a>
+          {" · "}
+          <a href="/terms" className="underline hover:text-blue-600">
+            Terms of Service
+          </a>
         </p>
       </div>
     </main>

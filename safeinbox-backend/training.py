@@ -100,7 +100,7 @@ def _run(db, model_store, encryptor, config):
     try:
         texts, labels = load_dataset(config["DATASET_PATH"])
         feedback_texts, feedback_labels = [], []
-        for item in db.feedback.find({}, {"text_enc": 1, "label": 1}):
+        for item in db.feedback.find({"text_enc": {"$exists": True}}, {"text_enc": 1, "label": 1}):
             try:
                 feedback_texts.append(encryptor.decrypt(item["text_enc"]))
                 feedback_labels.append(int(item["label"]))

@@ -13,12 +13,13 @@ SafeInbox is a web dashboard that connects to Gmail, scans your **unread** email
 3. [Google Cloud setup (one time)](#google-cloud-setup-one-time)
 4. [Run locally](#run-locally)
 5. [Run with Docker](#run-with-docker)
-6. [CI/CD with Jenkins](#cicd-with-jenkins)
-7. [Tests](#tests)
-8. [Configuration](#configuration)
-9. [API](#api)
-10. [Project structure](#project-structure)
-11. [Report requirements → implementation](#report-requirements--implementation)
+6. [Deploy to the internet (Vercel + Render + MongoDB Atlas)](#deploy-to-the-internet-vercel--render--mongodb-atlas)
+7. [CI/CD with Jenkins](#cicd-with-jenkins)
+8. [Tests](#tests)
+9. [Configuration](#configuration)
+10. [API](#api)
+11. [Project structure](#project-structure)
+12. [Report requirements → implementation](#report-requirements--implementation)
 
 ---
 
@@ -36,7 +37,7 @@ SafeInbox is a web dashboard that connects to Gmail, scans your **unread** email
 - **Actions**: Mark as read, Delete (moves to Trash), Report spam (moves to Gmail Spam and blocks the sender), Not spam (trusts the sender). Read the full cleaned email or open it in Gmail.
 - **Assistant (chatbot)**: "summary", "summarize #2", "show spam", "any phishing?", "why is #1 spam?", "set sensitivity to high", "fetch my emails"…
 - **Previous mails** history, a spam statistics chart, category filters, and a **dark/light mode**. Works on phones.
-- **Learning from users**: Report spam / Not spam choices are saved as labelled examples. Admins can retrain the model in the background. A new model only goes live if it keeps accuracy ≥ 90 %.
+- **Learning from users**: Report spam / Not spam choices block or trust that sender for the user. Admins can retrain the model in the background, and a new model only goes live if it keeps accuracy ≥ 90 %. With `STORE_FEEDBACK_TEXT=true` (private demos only), retraining also learns from the reported emails. It's off for public deployments because Google's Limited Use policy forbids training shared models on Gmail data.
 - **Role-based access**: accounts listed in `ADMIN_EMAILS` get the *admin* role (statistics, retraining, model rollback).
 - **Security & privacy (GDPR)**: email content, names, addresses and Gmail tokens are encrypted at rest with **AES-256-GCM**. Analyses are deleted automatically after 30 days (configurable). Users can **download** or **delete** all their data. Logging out revokes Gmail access.
 - **Caching**: emails are analysed once and stored, so refreshing only downloads new emails. Changing settings re-scores stored results without contacting Gmail.
@@ -120,6 +121,58 @@ docker compose down               # stop (data is kept)
 docker compose down -v            # stop and DELETE all data
 ```
 
+## Deploy to the internet (Vercel + Render + MongoDB Atlas)
+
+All three services have free plans:
+
+| Part | Service | Config file |
+|---|---|---|
+| Frontend (React build) | **Vercel** | `frontend/vercel.json` |
+| Backend (Flask in Docker) | **Render** web service | `render.yaml` |
+| Database | **MongoDB Atlas** M0 cluster | – |
+
+The browser loads the site from Vercel and calls the backend on Render directly. Render's free server sleeps after 15 minutes without visitors; the next visit wakes it in about a minute, and the login page shows a "Starting the server…" message meanwhile.
+
+**1. MongoDB Atlas.** Create a free **M0** cluster (pick a region near your Render region, e.g. Mumbai or Singapore):
+- **Database Access**: add a database user.
+- **Network Access**: allow `0.0.0.0/0` (Render's addresses change).
+- **Connect → Drivers**: copy the connection string and add `/safeinbox` before the `?`, e.g. `mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/safeinbox?retryWrites=true&w=majority`.
+
+**2. Render (backend).** **New → Blueprint** → connect the GitHub repository; Render reads `render.yaml`. Fill in:
+
+| Variable | Value |
+|---|---|
+| `MONGO_URI` | Atlas connection string from step 1 |
+| `GOOGLE_CLIENT_ID` | your OAuth client ID |
+| `ADMIN_EMAILS` | your Gmail address |
+| `CORS_ORIGINS` | your Vercel address from step 3, e.g. `https://safeinbox.vercel.app` (you can edit this after step 3) |
+| `DATA_ENCRYPTION_KEY` | output of `python -c "import base64,os;print(base64.urlsafe_b64encode(os.urandom(32)).decode())"`. **Keep a copy.** |
+
+After the deploy, `https://<your-service>.onrender.com/api/health` should show `"database":"mongodb"`.
+
+**3. Vercel (frontend).** **Add New → Project** → import the GitHub repository, then set:
+- **Root Directory**: `frontend`
+- **Environment Variables**:
+  - `VITE_GOOGLE_CLIENT_ID`: your client ID
+  - `VITE_API_BASE_URL`: the Render URL, e.g. `https://safeinbox-backend.onrender.com`
+  - `VITE_SUPPORT_EMAIL` (optional): a contact address for the policy pages
+
+Deploy. Then put the Vercel address into Render's `CORS_ORIGINS` if you haven't yet.
+
+**4. Google Cloud (publish the app).**
+- **Clients → your client → Authorized JavaScript origins**: add `https://<your-app>.vercel.app`.
+- **Branding**:
+  - App home page: `https://<your-app>.vercel.app`
+  - Privacy policy: `https://<your-app>.vercel.app/privacy`
+  - Terms of service: `https://<your-app>.vercel.app/terms`
+  - Authorized domains: `<your-app>.vercel.app`
+- **Audience → Publish app**. Because Gmail access is a restricted scope and the app is unverified, users see an "unverified app" screen (*Advanced → Go to SafeInbox*), and at most 100 users can sign up.
+
+Both Vercel and Render redeploy automatically on every push to `main`. To make the public site update **only after Jenkins tests pass**:
+1. Turn off auto-deploy in Render (Settings → Auto-Deploy: *No*) and in Vercel (Settings → Git → Ignored Build Step: *Don't build anything*, or disconnect Git).
+2. Copy each service's **Deploy Hook** URL.
+3. Add the URLs to Jenkins as *Secret text* credentials `safeinbox-render-deploy-hook` and `safeinbox-vercel-deploy-hook`. The *Deploy to cloud* stage then triggers them.
+
 ## CI/CD with Jenkins
 
 The [`Jenkinsfile`](Jenkinsfile) runs these stages:
@@ -127,11 +180,12 @@ The [`Jenkinsfile`](Jenkinsfile) runs these stages:
 | Stage | What happens |
 |---|---|
 | Checkout | Pulls the latest code from GitHub (polls every ~5 minutes) |
-| Backend: tests | `docker build --target test`: installs dependencies and runs the 52 pytest tests |
+| Backend: tests | `docker build --target test`: installs dependencies and runs the 55 pytest tests |
 | Frontend: lint & build | `docker build --target build`: `npm ci`, ESLint and the production build |
 | Build images | `docker compose build` |
 | Deploy | `docker compose up -d` (skip with the `DEPLOY` parameter) |
 | Smoke test | Calls `/api/health` through nginx until the stack is healthy |
+| Deploy to cloud | Optional: triggers Render/Vercel deploy hooks if those credentials exist (see above) |
 
 If a stage fails, the container logs are printed; temporary images are always cleaned up.
 
@@ -185,8 +239,19 @@ Backend environment variables (`safeinbox-backend/.env` locally, the root `.env`
 | `SESSION_MAX_AGE_SECONDS` | `28800` | Session length (8 h) |
 | `CORS_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Allowed browser origins |
 | `MIN_RETRAIN_ACCURACY` | `0.90` | A retrained model must reach this accuracy to be used |
+| `STORE_FEEDBACK_TEXT` | `false` | Keep reported emails' text for retraining (private demos only, see Limited Use) |
+| `REQUIRE_KEYS` | `false` | Refuse to start unless `SECRET_KEY` and `DATA_ENCRYPTION_KEY` are set (on in `render.yaml`) |
+| `PORT` / `WEB_CONCURRENCY` | `5000` / `2` | Port and gunicorn workers in the Docker image |
 
-Frontend: `VITE_GOOGLE_CLIENT_ID` (and optionally `VITE_BACKEND_URL` for the dev proxy).
+Frontend:
+
+| Variable | Purpose |
+|---|---|
+| `VITE_GOOGLE_CLIENT_ID` | OAuth client ID |
+| `VITE_API_BASE_URL` | Backend URL on Vercel; leave empty locally and in Docker |
+| `VITE_SUPPORT_EMAIL` | Contact address on the policy pages (optional) |
+| `VITE_SITE_URL` | Public address for link previews (optional; detected automatically on Vercel) |
+| `VITE_BACKEND_URL` | Where the dev proxy forwards `/api` (optional) |
 
 ## API
 
