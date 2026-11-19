@@ -12,9 +12,9 @@ else if (path === '/terms') page = <LegalPage kind="terms" />
 
 try {
   const theme = localStorage.getItem('safeinbox.theme')
-  if (theme === 'light') document.documentElement.classList.remove('dark')
+  if (theme === 'dark') document.documentElement.classList.add('dark')
 } catch {
-  // storage unavailable - keep the default dark theme
+  // storage unavailable - keep the default light theme
 }
 
 createRoot(document.getElementById('root')).render(<StrictMode>{page}</StrictMode>)

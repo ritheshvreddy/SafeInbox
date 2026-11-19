@@ -10,7 +10,7 @@ from preprocessing import clean_text
 from scoring import LIKELY_SAFE, LIKELY_SPAM, SENSITIVITIES, SUSPICIOUS, build_reason, calculate_spam_score
 from summarizer import summarize
 
-DEFAULT_PREFERENCES = {"sensitivity": "medium", "summary_sentences": 3, "max_emails": 25, "theme": "dark"}
+DEFAULT_PREFERENCES = {"sensitivity": "medium", "summary_sentences": 3, "max_emails": 25, "theme": "light"}
 ALLOWED_MAX_EMAILS = (10, 25, 50)
 MAX_STORED_BODY_CHARS = 10000
 

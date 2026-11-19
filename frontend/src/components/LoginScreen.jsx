@@ -10,9 +10,10 @@ const FEATURES = [
 ];
 
 const PREVIEW = [
-  { from: "PayPal Security", subject: "Your account is locked", label: "Spam", score: "93%", tint: "bg-rose-400/20 text-rose-100 ring-rose-300/30", avatar: "bg-white/15" },
-  { from: "The Souled Store", subject: "Doomsday drops are here", label: "Suspicious", score: "44%", tint: "bg-amber-400/20 text-amber-100 ring-amber-300/30", avatar: "bg-white/15" },
-  { from: "Alice Smith", subject: "Team meeting moved to 3 pm", label: "Safe", score: "4%", tint: "bg-emerald-400/20 text-emerald-100 ring-emerald-300/30", avatar: "bg-white/15" },
+  // Illustrative examples with fictional senders.
+  { from: "Northwind Bank Alerts", subject: "Unusual sign-in attempt on your account", label: "Spam", score: "94%", tint: "bg-rose-400/20 text-rose-100 ring-rose-300/30", avatar: "bg-white/15" },
+  { from: "Brightway Courier", subject: "Your parcel is waiting", label: "Suspicious", score: "46%", tint: "bg-amber-400/20 text-amber-100 ring-amber-300/30", avatar: "bg-white/15" },
+  { from: "Priya Raman", subject: "Design review moved to Friday", label: "Safe", score: "3%", tint: "bg-emerald-400/20 text-emerald-100 ring-emerald-300/30", avatar: "bg-white/15" },
 ];
 
 function BrandPanel({ retentionDays }) {

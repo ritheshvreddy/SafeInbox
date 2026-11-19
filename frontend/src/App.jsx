@@ -28,7 +28,7 @@ function initialTheme() {
   } catch {
     // ignore unavailable storage
   }
-  return window.matchMedia?.("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  return "light"; // light mode is the default; dark mode only when the user picks it
 }
 
 function IconButton({ icon, label, onClick }) {
@@ -211,7 +211,6 @@ export default function App() {
       const data = await api("/api/auth/google", { method: "POST", body: { access_token: accessToken } });
       setSessionToken(data.sessionToken);
       setUser(data.user);
-      if (data.user.preferences?.theme) setTheme(data.user.preferences.theme);
       await loadEmails();
     } catch (err) {
       setLoginError(err.message);
