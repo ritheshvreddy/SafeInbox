@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, api, getSessionToken, setSessionToken } from "./api";
 import { requestGmailAccess } from "./googleAuth";
 import { LABEL_STYLES, LABELS } from "./labels";
+import { btn, cx, muted, notice as noticeClass } from "./ui";
 import AdminModal from "./components/AdminModal";
 import ChatPanel from "./components/ChatPanel";
 import EmailCard from "./components/EmailCard";
@@ -31,28 +32,20 @@ function initialTheme() {
 
 function IconButton({ icon, label, onClick }) {
   return (
-    <button
-      onClick={onClick}
-      title={label}
-      aria-label={label}
-      className="rounded-full border border-slate-300 bg-white p-2 text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-    >
+    <button onClick={onClick} title={label} aria-label={label} className={btn.icon}>
       <Icon name={icon} className="h-5 w-5" />
     </button>
   );
 }
 
-function Banner({ tone, children, onClose }) {
-  const tones = {
-    red: "border-red-300 bg-red-50 text-red-800 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200",
-    green: "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200",
-    amber: "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200",
-  };
+// One style for every message; the icon says whether it's an error, a success or information.
+function Banner({ icon = "info", children, onClose }) {
   return (
-    <div className={`mb-4 flex items-start justify-between gap-3 rounded-lg border p-3 text-sm ${tones[tone]}`} role="status">
+    <div className={cx(noticeClass, "mb-4 flex items-start gap-3")} role="status">
+      <Icon name={icon} className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
       <div className="min-w-0 flex-1">{children}</div>
       {onClose && (
-        <button onClick={onClose} aria-label="Dismiss" className="opacity-70 hover:opacity-100">
+        <button onClick={onClose} aria-label="Dismiss" className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
           <Icon name="close" />
         </button>
       )}
@@ -307,7 +300,7 @@ export default function App() {
     return result;
   }, [emails]);
   const visible = filter === "all" ? emails : emails.filter((email) => email.label === filter);
-  const shell = "min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100";
+  const shell = "min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100";
   const themeButton = (
     <IconButton icon={theme === "dark" ? "sun" : "moon"} label={theme === "dark" ? "Light mode" : "Dark mode"} onClick={toggleTheme} />
   );
@@ -319,7 +312,7 @@ export default function App() {
   if (!user) {
     return (
       <div className={shell}>
-        <header className="flex justify-end gap-2 p-4">
+        <header className="flex justify-end gap-1 p-4">
           <IconButton icon="info" label="About and privacy" onClick={() => setModal("info")} />
           {themeButton}
         </header>
@@ -348,84 +341,84 @@ export default function App() {
         onSelectHistory={selectHistory}
       />
 
-      <main className="min-w-0 flex-1 px-4 pt-5 pb-28 sm:px-6 md:px-8">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold">Hi {firstName}</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              {loading
-                ? "Checking your inbox…"
-                : `${emails.length} unread email${emails.length === 1 ? "" : "s"} analysed · sensitivity ${user.preferences.sensitivity}`}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => loadEmails()}
-              disabled={loading}
-              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 font-medium text-white shadow hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60"
-            >
-              <Icon name="refresh" className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              {loading ? "Loading…" : "Refresh emails"}
-            </button>
-            <IconButton icon="gear" label="Settings" onClick={() => setModal("settings")} />
-            <IconButton icon="info" label="About and privacy" onClick={() => setModal("info")} />
-            {themeButton}
-          </div>
-        </div>
-
-        {needsReconnect && (
-          <Banner tone="amber">
-            <span className="mr-2">Your Gmail connection expired (Google only allows about an hour at a time).</span>
-            <button onClick={reconnect} className="font-semibold underline">
-              Reconnect Gmail
-            </button>
-          </Banner>
-        )}
-        {error && (
-          <Banner tone="red" onClose={() => setError("")}>
-            {error}
-          </Banner>
-        )}
-        {notice && (
-          <Banner tone="green" onClose={() => setNotice("")}>
-            {notice}
-          </Banner>
-        )}
-
-        <div className="mb-4 flex gap-2 overflow-x-auto pb-1" role="tablist">
-          {["all", ...LABELS].map((key) => (
-            <button
-              key={key}
-              role="tab"
-              aria-selected={filter === key}
-              onClick={() => setFilter(key)}
-              className={`whitespace-nowrap rounded-full border px-3 py-1 text-sm ${
-                filter === key
-                  ? "border-blue-600 bg-blue-600 text-white"
-                  : "border-slate-300 bg-white hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700"
-              }`}
-            >
-              {key === "all" ? "All" : LABEL_STYLES[key].short} ({counts[key]})
-            </button>
-          ))}
-        </div>
-
-        <div className="space-y-4">
-          {visible.map((email) => (
-            <EmailCard key={email.id} email={email} busy={Boolean(busyIds[email.id])} onAction={handleAction} />
-          ))}
-          {!loading && visible.length === 0 && (
-            <div className="rounded-xl border border-dashed border-slate-300 p-10 text-center text-slate-500 dark:border-slate-700 dark:text-slate-400">
-              {emails.length === 0 ? "No unread emails in your inbox. Nice!" : "No emails in this category."}
+      <main className="min-w-0 flex-1 px-4 pt-6 pb-28 sm:px-8">
+        <div className="mx-auto max-w-4xl">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">Hi {firstName}</h1>
+              <p className={cx("mt-0.5 text-sm", muted)}>
+                {loading
+                  ? "Checking your inbox…"
+                  : `${emails.length} unread email${emails.length === 1 ? "" : "s"} · ${user.preferences.sensitivity} sensitivity`}
+              </p>
             </div>
+            <div className="flex items-center gap-1">
+              <button onClick={() => loadEmails()} disabled={loading} className={cx(btn.primary, "mr-2")}>
+                <Icon name="refresh" className={cx("h-4 w-4", loading && "animate-spin")} />
+                {loading ? "Loading…" : "Refresh"}
+              </button>
+              <IconButton icon="gear" label="Settings" onClick={() => setModal("settings")} />
+              <IconButton icon="info" label="About and privacy" onClick={() => setModal("info")} />
+              {themeButton}
+            </div>
+          </div>
+
+          {needsReconnect && (
+            <Banner icon="alert">
+              <span className="mr-2">Your Gmail connection expired (Google only allows about an hour at a time).</span>
+              <button onClick={reconnect} className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+                Reconnect Gmail
+              </button>
+            </Banner>
           )}
-          {loading && emails.length === 0 && (
-            <div className="space-y-4">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="h-40 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-800" />
+          {error && (
+            <Banner icon="alert" onClose={() => setError("")}>
+              {error}
+            </Banner>
+          )}
+          {notice && (
+            <Banner icon="check" onClose={() => setNotice("")}>
+              {notice}
+            </Banner>
+          )}
+
+          <div
+            className="mb-5 inline-flex max-w-full gap-1 overflow-x-auto rounded-lg bg-slate-100 p-1 dark:bg-slate-800/70"
+            role="tablist"
+          >
+            {["all", ...LABELS].map((key) => (
+              <button
+                key={key}
+                role="tab"
+                aria-selected={filter === key}
+                onClick={() => setFilter(key)}
+                className={cx(
+                  "whitespace-nowrap rounded-md px-3 py-1.5 text-sm transition",
+                  filter === key
+                    ? "bg-white font-medium text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white"
+                    : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                )}
+              >
+                {key === "all" ? "All" : LABEL_STYLES[key].short}
+                <span className="ml-1.5 tabular-nums text-slate-400">{counts[key]}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-3">
+            {visible.map((email) => (
+              <EmailCard key={email.id} email={email} busy={Boolean(busyIds[email.id])} onAction={handleAction} />
+            ))}
+            {!loading && visible.length === 0 && (
+              <div className={cx("rounded-xl border border-dashed border-slate-200 p-12 text-center text-sm dark:border-slate-800", muted)}>
+                {emails.length === 0 ? "No unread emails in your inbox. Nice!" : "No emails in this category."}
+              </div>
+            )}
+            {loading && emails.length === 0 &&
+              [0, 1, 2].map((i) => (
+                <div key={i} className="h-44 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-900" />
               ))}
-            </div>
-          )}
+          </div>
         </div>
       </main>
 

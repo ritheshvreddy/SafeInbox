@@ -1,23 +1,24 @@
 // Shared display helpers for spam labels, dates and percentages.
+// Labels are told apart by shades of the single accent colour (indigo), not by different colours.
 export const LABELS = ["Likely spam", "Suspicious", "Likely safe"];
 
 export const LABEL_STYLES = {
   "Likely spam": {
-    badge: "bg-red-100 text-red-700 ring-red-600/20 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-400/30",
-    accent: "border-l-red-500",
-    color: "#ef4444",
+    badge: "bg-indigo-600 text-white dark:bg-indigo-500",
+    bar: "bg-indigo-600 dark:bg-indigo-500",
+    color: "#4f46e5",
     short: "Spam",
   },
   Suspicious: {
-    badge: "bg-amber-100 text-amber-800 ring-amber-600/20 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-400/30",
-    accent: "border-l-amber-500",
-    color: "#f59e0b",
+    badge: "bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-200 dark:bg-indigo-500/15 dark:text-indigo-200 dark:ring-indigo-400/30",
+    bar: "bg-indigo-300 dark:bg-indigo-400/60",
+    color: "#a5b4fc",
     short: "Suspicious",
   },
   "Likely safe": {
-    badge: "bg-emerald-100 text-emerald-800 ring-emerald-600/20 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-400/30",
-    accent: "border-l-emerald-500",
-    color: "#10b981",
+    badge: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+    bar: "bg-transparent",
+    color: "#94a3b8",
     short: "Safe",
   },
 };

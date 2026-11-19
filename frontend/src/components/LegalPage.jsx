@@ -7,11 +7,11 @@ const CONTACT = import.meta.env.VITE_SUPPORT_EMAIL;
 
 function Contact() {
   return CONTACT ? (
-    <a className="text-blue-700 underline dark:text-blue-300" href={`mailto:${CONTACT}`}>
+    <a className="text-indigo-600 underline decoration-indigo-300 underline-offset-2 dark:text-indigo-400" href={`mailto:${CONTACT}`}>
       {CONTACT}
     </a>
   ) : (
-    <a className="text-blue-700 underline dark:text-blue-300" href={`${REPO}/issues`}>
+    <a className="text-indigo-600 underline decoration-indigo-300 underline-offset-2 dark:text-indigo-400" href={`${REPO}/issues`}>
       the project's GitHub page
     </a>
   );
@@ -80,7 +80,7 @@ function Privacy() {
         <p>
           SafeInbox's use and transfer of information received from Google APIs adheres to the{" "}
           <a
-            className="text-blue-700 underline dark:text-blue-300"
+            className="text-indigo-600 underline decoration-indigo-300 underline-offset-2 dark:text-indigo-400"
             href="https://developers.google.com/terms/api-services-user-data-policy"
           >
             Google API Services User Data Policy
@@ -95,7 +95,7 @@ function Privacy() {
           <li>Delete your account and all stored data: ⓘ menu → "Delete my account and data".</li>
           <li>
             Remove access at any time in your{" "}
-            <a className="text-blue-700 underline dark:text-blue-300" href="https://myaccount.google.com/permissions">
+            <a className="text-indigo-600 underline decoration-indigo-300 underline-offset-2 dark:text-indigo-400" href="https://myaccount.google.com/permissions">
               Google account permissions
             </a>
             .
@@ -149,7 +149,7 @@ function Terms() {
 
 export default function LegalPage({ kind }) {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-200">
+    <div className="min-h-screen bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-300">
       <main className="mx-auto max-w-3xl px-4 py-8 leading-7 sm:px-6">
         <a href="/" className="mb-6 inline-block text-slate-900 dark:text-white">
           <Logo size={36} nameClassName="text-xl" />

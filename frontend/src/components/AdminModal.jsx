@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../api";
 import { formatDate, percent } from "../labels";
+import { btn, cx, muted, notice } from "../ui";
 import Modal from "./Modal";
 
 function Tile({ label, value }) {
   return (
-    <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-      <div className="text-xs text-slate-500 dark:text-slate-400">{label}</div>
-      <div className="text-xl font-semibold">{value}</div>
+    <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
+      <div className={cx("text-xs", muted)}>{label}</div>
+      <div className="mt-0.5 text-xl font-semibold tabular-nums text-slate-900 dark:text-white">{value}</div>
     </div>
   );
 }
@@ -68,10 +69,10 @@ export default function AdminModal({ onClose, onModelChanged }) {
 
   return (
     <Modal title="Administration" onClose={onClose} wide>
-      {!stats && !error && <p className="text-slate-500">Loading…</p>}
+      {!stats && !error && <p className={muted}>Loading…</p>}
       {stats && (
-        <div className="space-y-5 text-sm">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="space-y-6 text-sm">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Tile label="Users" value={stats.users} />
             <Tile label="Analysed emails" value={stats.analysedEmails} />
             <Tile label="Model says spam" value={stats.modelSpam} />
@@ -82,10 +83,10 @@ export default function AdminModal({ onClose, onModelChanged }) {
             <Tile label="Database" value={stats.database === "mongodb" ? "MongoDB" : "In-memory"} />
           </div>
 
-          <section className="rounded-lg border border-slate-200 p-4 dark:border-slate-700">
-            <h3 className="font-semibold">Spam model</h3>
-            <p className="mt-1">
-              Active version: <span className="font-mono">{stats.model.version}</span>
+          <section>
+            <h3 className="font-semibold text-slate-900 dark:text-white">Spam model</h3>
+            <p className="mt-1 text-slate-600 dark:text-slate-300">
+              Active version <span className="font-mono">{stats.model.version}</span>
               {stats.model.metrics && (
                 <>
                   {" "}
@@ -94,37 +95,21 @@ export default function AdminModal({ onClose, onModelChanged }) {
                 </>
               )}
             </p>
-            <p className="mt-2 text-slate-500 dark:text-slate-400">
-              Retraining runs in the background on the original dataset plus the {stats.feedback.spam + stats.feedback.notSpam}{" "}
-              emails users labelled. The new model is only used if it keeps accuracy above 90%.
+            <p className={cx("mt-2", muted)}>
+              Retraining runs in the background. A new model is only used if it keeps accuracy above 90%.
             </p>
             {job && job.status !== "idle" && (
-              <p
-                className={`mt-3 rounded-md p-2 ${
-                  job.status === "succeeded"
-                    ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300"
-                    : job.status === "running"
-                    ? "bg-blue-50 text-blue-800 dark:bg-blue-500/10 dark:text-blue-300"
-                    : "bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300"
-                }`}
-              >
-                <strong className="capitalize">{job.status}</strong>: {job.message}
-                {job.finishedAt && <span className="block text-xs opacity-75">Finished {formatDate(job.finishedAt)}</span>}
-              </p>
+              <div className={cx(notice, "mt-3")}>
+                <span className="font-medium capitalize text-slate-900 dark:text-white">{job.status}</span>: {job.message}
+                {job.finishedAt && <span className={cx("block text-xs", muted)}>Finished {formatDate(job.finishedAt)}</span>}
+              </div>
             )}
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                onClick={retrain}
-                disabled={running || working}
-                className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-              >
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button onClick={retrain} disabled={running || working} className={btn.primary}>
                 {running ? "Retraining…" : "Retrain model"}
               </button>
               {stats.model.version !== "base" && (
-                <button
-                  onClick={reset}
-                  className="rounded-lg border border-slate-300 px-4 py-2 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-700"
-                >
+                <button onClick={reset} className={btn.secondary}>
                   Use original model
                 </button>
               )}
@@ -132,7 +117,7 @@ export default function AdminModal({ onClose, onModelChanged }) {
           </section>
         </div>
       )}
-      {error && <p className="mt-3 text-red-600">{error}</p>}
+      {error && <p className="mt-3 font-medium text-slate-900 dark:text-white">{error}</p>}
     </Modal>
   );
 }

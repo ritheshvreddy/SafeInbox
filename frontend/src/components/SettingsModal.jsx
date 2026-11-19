@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { btn, cx, input, link, muted } from "../ui";
 import Modal from "./Modal";
 
 const SENSITIVITY = [
@@ -44,41 +45,45 @@ export default function SettingsModal({ preferences, onSave, onClose }) {
   return (
     <Modal title="Settings" onClose={onClose}>
       <fieldset>
-        <legend className="mb-2 font-medium">Spam sensitivity</legend>
+        <legend className="mb-2 text-sm font-medium text-slate-900 dark:text-white">Spam sensitivity</legend>
         <div className="space-y-2">
-          {SENSITIVITY.map((option) => (
-            <label
-              key={option.value}
-              className={`flex cursor-pointer gap-3 rounded-lg border p-3 ${
-                draft.sensitivity === option.value
-                  ? "border-blue-500 bg-blue-50 dark:bg-blue-500/10"
-                  : "border-slate-200 dark:border-slate-700"
-              }`}
-            >
-              <input
-                type="radio"
-                name="sensitivity"
-                value={option.value}
-                checked={draft.sensitivity === option.value}
-                onChange={() => setDraft({ ...draft, sensitivity: option.value })}
-                className="mt-1"
-              />
-              <span>
-                <span className="font-medium">{option.title}</span>
-                <span className="block text-sm text-slate-500 dark:text-slate-400">{option.text}</span>
-              </span>
-            </label>
-          ))}
+          {SENSITIVITY.map((option) => {
+            const selected = draft.sensitivity === option.value;
+            return (
+              <label
+                key={option.value}
+                className={cx(
+                  "flex cursor-pointer gap-3 rounded-lg border p-3 transition",
+                  selected
+                    ? "border-indigo-500 bg-indigo-50/60 dark:border-indigo-400 dark:bg-indigo-500/10"
+                    : "border-slate-200 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600"
+                )}
+              >
+                <input
+                  type="radio"
+                  name="sensitivity"
+                  value={option.value}
+                  checked={selected}
+                  onChange={() => setDraft({ ...draft, sensitivity: option.value })}
+                  className="mt-1 accent-indigo-600"
+                />
+                <span className="text-sm">
+                  <span className="font-medium text-slate-900 dark:text-white">{option.title}</span>
+                  <span className={cx("block", muted)}>{option.text}</span>
+                </span>
+              </label>
+            );
+          })}
         </div>
       </fieldset>
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
-        <label className="block">
-          <span className="font-medium">Summary length</span>
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <label className="block text-sm">
+          <span className="font-medium text-slate-900 dark:text-white">Summary length</span>
           <select
             value={draft.summary_sentences}
             onChange={(event) => setDraft({ ...draft, summary_sentences: event.target.value })}
-            className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
+            className={cx(input, "mt-1.5")}
           >
             {[1, 2, 3, 4, 5].map((n) => (
               <option key={n} value={n}>
@@ -87,12 +92,12 @@ export default function SettingsModal({ preferences, onSave, onClose }) {
             ))}
           </select>
         </label>
-        <label className="block">
-          <span className="font-medium">Emails per refresh</span>
+        <label className="block text-sm">
+          <span className="font-medium text-slate-900 dark:text-white">Emails per refresh</span>
           <select
             value={draft.max_emails}
             onChange={(event) => setDraft({ ...draft, max_emails: event.target.value })}
-            className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
+            className={cx(input, "mt-1.5")}
           >
             {[10, 25, 50].map((n) => (
               <option key={n} value={n}>
@@ -104,27 +109,28 @@ export default function SettingsModal({ preferences, onSave, onClose }) {
       </div>
 
       <div className="mt-6">
-        <h3 className="font-medium">Senders you've marked</h3>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          "Not spam" trusts a sender; "Report spam" blocks them. Remove one to go back to normal scoring.
+        <h3 className="text-sm font-medium text-slate-900 dark:text-white">Senders you've marked</h3>
+        <p className={cx("text-sm", muted)}>
+          "Not spam" trusts a sender, "Report spam" blocks them. Remove one to go back to normal scoring.
         </p>
-        <ul className="mt-2 divide-y divide-slate-200 rounded-lg border border-slate-200 dark:divide-slate-700 dark:border-slate-700">
-          {senders === null && <li className="p-3 text-sm text-slate-400">Loading…</li>}
-          {senders?.length === 0 && <li className="p-3 text-sm text-slate-400">No senders yet.</li>}
+        <ul className="mt-2 divide-y divide-slate-100 rounded-lg border border-slate-200 dark:divide-slate-800 dark:border-slate-700">
+          {senders === null && <li className={cx("p-3 text-sm", muted)}>Loading…</li>}
+          {senders?.length === 0 && <li className={cx("p-3 text-sm", muted)}>No senders yet.</li>}
           {senders?.map((sender) => (
             <li key={sender.id} className="flex items-center justify-between gap-2 p-3 text-sm">
-              <span className="min-w-0 truncate">{sender.email}</span>
-              <span className="flex shrink-0 items-center gap-2">
+              <span className="min-w-0 truncate text-slate-700 dark:text-slate-200">{sender.email}</span>
+              <span className="flex shrink-0 items-center gap-3">
                 <span
-                  className={`rounded-full px-2 py-0.5 text-xs ${
+                  className={cx(
+                    "rounded-md px-2 py-0.5 text-xs",
                     sender.status === "trusted"
-                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
-                      : "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300"
-                  }`}
+                      ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                      : "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-200"
+                  )}
                 >
                   {sender.status === "trusted" ? "Trusted" : "Blocked"}
                 </span>
-                <button onClick={() => forget(sender)} className="text-blue-700 hover:underline dark:text-blue-300">
+                <button onClick={() => forget(sender)} className={link}>
                   Remove
                 </button>
               </span>
@@ -133,16 +139,12 @@ export default function SettingsModal({ preferences, onSave, onClose }) {
         </ul>
       </div>
 
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-4 text-sm font-medium text-slate-900 dark:text-white">{error}</p>}
       <div className="mt-6 flex justify-end gap-2">
-        <button onClick={onClose} className="rounded-lg px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700">
+        <button onClick={onClose} className={btn.ghost}>
           Cancel
         </button>
-        <button
-          onClick={save}
-          disabled={saving}
-          className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-        >
+        <button onClick={save} disabled={saving} className={btn.primary}>
           {saving ? "Saving…" : "Save"}
         </button>
       </div>

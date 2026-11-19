@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { LABEL_STYLES, percent } from "../labels";
+import { btn, cx, input, muted } from "../ui";
 import Icon from "./Icon";
 
 const SUGGESTIONS = ["summary", "show spam", "any phishing?", "why is #1 spam?", "fetch my emails"];
@@ -11,7 +12,7 @@ function scrollToEmail(id) {
 
 export default function ChatPanel({ onRefresh, onPreferencesChanged }) {
   const [open, setOpen] = useState(false);
-  const [input, setInput] = useState("");
+  const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [messages, setMessages] = useState([
     { from: "bot", text: 'Hi! Ask me about your unread emails - try "summary" or "show spam". Type "help" for more.' },
@@ -22,10 +23,10 @@ export default function ChatPanel({ onRefresh, onPreferencesChanged }) {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, open]);
 
-  async function send(text) {
-    const message = text.trim();
+  async function send(value) {
+    const message = value.trim();
     if (!message || sending) return;
-    setInput("");
+    setText("");
     setMessages((current) => [...current, { from: "user", text: message }]);
     setSending(true);
     try {
@@ -38,7 +39,7 @@ export default function ChatPanel({ onRefresh, onPreferencesChanged }) {
         await onPreferencesChanged();
       }
     } catch (error) {
-      setMessages((current) => [...current, { from: "bot", text: error.message, error: true }]);
+      setMessages((current) => [...current, { from: "bot", text: error.message }]);
     } finally {
       setSending(false);
     }
@@ -48,39 +49,39 @@ export default function ChatPanel({ onRefresh, onPreferencesChanged }) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-3 font-medium text-white shadow-lg hover:bg-blue-700"
+        aria-label="Ask SafeInbox"
+        className={cx(btn.primary, "fixed right-4 bottom-4 z-40 rounded-full p-3.5 shadow-lg sm:px-4 sm:py-3")}
       >
         <Icon name="chat" className="h-5 w-5" />
-        Ask SafeInbox
+        <span className="hidden sm:inline">Ask SafeInbox</span>
       </button>
     );
   }
 
   return (
     <section
-      className="fixed inset-x-2 bottom-2 z-40 flex h-[70vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-800 sm:inset-x-auto sm:right-4 sm:bottom-4 sm:h-[520px] sm:w-[380px]"
+      className="fixed inset-x-2 bottom-2 z-40 flex h-[70vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900 sm:inset-x-auto sm:right-4 sm:bottom-4 sm:h-[520px] sm:w-[380px]"
       aria-label="SafeInbox assistant"
     >
-      <header className="flex items-center justify-between bg-blue-600 px-4 py-3 text-white">
-        <span className="flex items-center gap-2 font-semibold">
-          <Icon name="chat" className="h-5 w-5" /> SafeInbox assistant
+      <header className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-slate-800">
+        <span className="flex items-center gap-2 font-medium text-slate-900 dark:text-white">
+          <Icon name="chat" className="h-4 w-4 text-indigo-600 dark:text-indigo-400" /> Assistant
         </span>
-        <button onClick={() => setOpen(false)} className="rounded p-1 hover:bg-blue-700" aria-label="Close chat">
+        <button onClick={() => setOpen(false)} className={btn.icon} aria-label="Close chat">
           <Icon name="close" className="h-5 w-5" />
         </button>
       </header>
 
-      <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto p-3">
+      <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto p-4">
         {messages.map((message, index) => (
           <div key={index} className={`flex ${message.from === "user" ? "justify-end" : "justify-start"}`}>
             <div
-              className={`max-w-[85%] whitespace-pre-line rounded-2xl px-3 py-2 text-sm ${
+              className={cx(
+                "max-w-[85%] whitespace-pre-line rounded-2xl px-3.5 py-2 text-sm leading-6",
                 message.from === "user"
-                  ? "rounded-br-sm bg-blue-600 text-white"
-                  : message.error
-                  ? "rounded-bl-sm bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300"
-                  : "rounded-bl-sm bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-100"
-              }`}
+                  ? "rounded-br-md bg-indigo-600 text-white"
+                  : "rounded-bl-md bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100"
+              )}
             >
               {message.text}
               {message.items?.length > 0 && (
@@ -89,14 +90,14 @@ export default function ChatPanel({ onRefresh, onPreferencesChanged }) {
                     <li key={item.id}>
                       <button
                         onClick={() => scrollToEmail(item.id)}
-                        className="w-full rounded-lg bg-white px-2 py-1.5 text-left hover:ring-2 hover:ring-blue-400 dark:bg-slate-800"
+                        className="w-full rounded-lg bg-white px-2.5 py-1.5 text-left transition hover:ring-1 hover:ring-indigo-300 dark:bg-slate-900"
                       >
                         <span className="block truncate font-medium text-slate-900 dark:text-white">
                           #{item.index} {item.title}
                         </span>
-                        <span className="flex justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+                        <span className={cx("flex justify-between gap-2 text-xs", muted)}>
                           <span className="truncate">{item.subtitle}</span>
-                          <span style={{ color: LABEL_STYLES[item.label]?.color }}>
+                          <span className="shrink-0">
                             {LABEL_STYLES[item.label]?.short} {percent(item.score)}
                           </span>
                         </span>
@@ -108,15 +109,15 @@ export default function ChatPanel({ onRefresh, onPreferencesChanged }) {
             </div>
           </div>
         ))}
-        {sending && <div className="text-xs text-slate-400">SafeInbox is thinking…</div>}
+        {sending && <p className={cx("text-xs", muted)}>Thinking…</p>}
       </div>
 
-      <div className="flex gap-1.5 overflow-x-auto border-t border-slate-200 px-3 py-2 dark:border-slate-700">
+      <div className="flex gap-1.5 overflow-x-auto px-4 pb-2">
         {SUGGESTIONS.map((suggestion) => (
           <button
             key={suggestion}
             onClick={() => send(suggestion)}
-            className="whitespace-nowrap rounded-full border border-slate-300 px-2.5 py-1 text-xs hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-700"
+            className="whitespace-nowrap rounded-full border border-slate-200 px-2.5 py-1 text-xs text-slate-600 transition hover:border-indigo-300 hover:text-indigo-700 dark:border-slate-700 dark:text-slate-300 dark:hover:text-indigo-300"
           >
             {suggestion}
           </button>
@@ -125,24 +126,19 @@ export default function ChatPanel({ onRefresh, onPreferencesChanged }) {
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          send(input);
+          send(text);
         }}
-        className="flex gap-2 border-t border-slate-200 p-3 dark:border-slate-700"
+        className="flex gap-2 border-t border-slate-100 p-3 dark:border-slate-800"
       >
         <input
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
+          value={text}
+          onChange={(event) => setText(event.target.value)}
           placeholder="Ask a question…"
           maxLength={500}
-          className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900"
+          className={input}
           aria-label="Question"
         />
-        <button
-          type="submit"
-          disabled={sending || !input.trim()}
-          className="rounded-lg bg-blue-600 px-3 text-white hover:bg-blue-700 disabled:opacity-50"
-          aria-label="Send"
-        >
+        <button type="submit" disabled={sending || !text.trim()} className={cx(btn.primary, "px-3")} aria-label="Send">
           <Icon name="send" />
         </button>
       </form>
