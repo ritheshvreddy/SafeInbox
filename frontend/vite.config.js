@@ -29,8 +29,8 @@ export default defineConfig(({ mode }) => {
     build: {
       rollupOptions: {
         output: {
-          // Keep the large chart library in its own cached file.
-          manualChunks: { react: ['react', 'react-dom'], charts: ['recharts'] },
+          // Keep React in its own long-cached file.
+          manualChunks: { react: ['react', 'react-dom'] },
         },
       },
     },

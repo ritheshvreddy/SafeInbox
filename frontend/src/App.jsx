@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, api, getSessionToken, setSessionToken } from "./api";
 import { requestGmailAccess } from "./googleAuth";
-import { LABEL_STYLES, LABELS } from "./labels";
-import { btn, cx, muted, notice as noticeClass } from "./ui";
+import { LABEL_STYLES } from "./labels";
+import { box, btn, cx, input, muted, toneIcon } from "./ui";
 import AdminModal from "./components/AdminModal";
 import ChatPanel from "./components/ChatPanel";
 import EmailCard from "./components/EmailCard";
@@ -11,6 +11,7 @@ import InfoModal from "./components/InfoModal";
 import LoginScreen from "./components/LoginScreen";
 import SettingsModal from "./components/SettingsModal";
 import Sidebar from "./components/Sidebar";
+import StatCards from "./components/StatCards";
 
 const EMPTY_STATS = { spam: 0, suspicious: 0, safe: 0, phishing: 0 };
 const ACTION_MESSAGES = {
@@ -38,14 +39,15 @@ function IconButton({ icon, label, onClick }) {
   );
 }
 
-// One style for every message; the icon says whether it's an error, a success or information.
-function Banner({ icon = "info", children, onClose }) {
+const BANNER_ICONS = { info: "info", success: "check", warning: "alert", danger: "alert" };
+
+function Banner({ kind = "info", children, onClose }) {
   return (
-    <div className={cx(noticeClass, "mb-4 flex items-start gap-3")} role="status">
-      <Icon name={icon} className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
+    <div className={cx(box(kind), "mb-4 flex items-start gap-3")} role="status">
+      <Icon name={BANNER_ICONS[kind]} className={cx("mt-0.5 h-4 w-4 shrink-0", toneIcon[kind])} />
       <div className="min-w-0 flex-1">{children}</div>
       {onClose && (
-        <button onClick={onClose} aria-label="Dismiss" className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
+        <button onClick={onClose} aria-label="Dismiss" className="opacity-50 hover:opacity-100">
           <Icon name="close" />
         </button>
       )}
@@ -68,6 +70,7 @@ export default function App() {
   const [needsReconnect, setNeedsReconnect] = useState(false);
   const [busyIds, setBusyIds] = useState({});
   const [filter, setFilter] = useState("all");
+  const [query, setQuery] = useState("");
   const [modal, setModal] = useState(null);
   const [retentionDays, setRetentionDays] = useState(30);
   const [serverStatus, setServerStatus] = useState("checking");
@@ -292,14 +295,14 @@ export default function App() {
     }
   }
 
-  const counts = useMemo(() => {
-    const result = { all: emails.length };
-    LABELS.forEach((label) => {
-      result[label] = emails.filter((email) => email.label === label).length;
-    });
-    return result;
-  }, [emails]);
-  const visible = filter === "all" ? emails : emails.filter((email) => email.label === filter);
+  const visible = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    return emails.filter(
+      (email) =>
+        (filter === "all" || email.label === filter) &&
+        (!term || `${email.senderName} ${email.senderEmail} ${email.subject} ${email.summary}`.toLowerCase().includes(term))
+    );
+  }, [emails, filter, query]);
   const shell = "min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100";
   const themeButton = (
     <IconButton icon={theme === "dark" ? "sun" : "moon"} label={theme === "dark" ? "Light mode" : "Dark mode"} onClick={toggleTheme} />
@@ -312,16 +315,18 @@ export default function App() {
   if (!user) {
     return (
       <div className={shell}>
-        <header className="flex justify-end gap-1 p-4">
-          <IconButton icon="info" label="About and privacy" onClick={() => setModal("info")} />
-          {themeButton}
-        </header>
         <LoginScreen
           onLogin={login}
           busy={signingIn}
           error={loginError}
           retentionDays={retentionDays}
           serverStatus={serverStatus}
+          topRight={
+            <>
+              <IconButton icon="info" label="About and privacy" onClick={() => setModal("info")} />
+              {themeButton}
+            </>
+          }
         />
         {modal === "info" && <InfoModal signedIn={false} retentionDays={retentionDays} onClose={() => setModal(null)} />}
       </div>
@@ -329,94 +334,116 @@ export default function App() {
   }
 
   const firstName = (user.name || "").split(" ")[0];
+  const today = new Date().toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" });
+  const filterName = filter === "all" ? "All emails" : `${LABEL_STYLES[filter].short} emails`;
 
   return (
     <div className={`${shell} md:flex`}>
       <Sidebar
         user={user}
-        stats={stats}
+        unread={emails.length}
         history={history}
         onLogout={logout}
         onOpenAdmin={() => setModal("admin")}
+        onOpenSettings={() => setModal("settings")}
+        onOpenInfo={() => setModal("info")}
         onSelectHistory={selectHistory}
       />
 
-      <main className="min-w-0 flex-1 px-4 pt-6 pb-28 sm:px-8">
-        <div className="mx-auto max-w-4xl">
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">Hi {firstName}</h1>
-              <p className={cx("mt-0.5 text-sm", muted)}>
-                {loading
-                  ? "Checking your inbox…"
-                  : `${emails.length} unread email${emails.length === 1 ? "" : "s"} · ${user.preferences.sensitivity} sensitivity`}
-              </p>
+      <main className="min-w-0 flex-1">
+        <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
+          <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-8">
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-semibold text-slate-900 dark:text-white">
+                <span className="sm:hidden">Hi {firstName}</span>
+                <span className="hidden sm:inline">Good to see you, {firstName}</span>
+              </h1>
+              <p className={cx("text-xs", muted)}>{today}</p>
             </div>
             <div className="flex items-center gap-1">
-              <button onClick={() => loadEmails()} disabled={loading} className={cx(btn.primary, "mr-2")}>
-                <Icon name="refresh" className={cx("h-4 w-4", loading && "animate-spin")} />
-                {loading ? "Loading…" : "Refresh"}
-              </button>
-              <IconButton icon="gear" label="Settings" onClick={() => setModal("settings")} />
-              <IconButton icon="info" label="About and privacy" onClick={() => setModal("info")} />
+              <span className="md:hidden">
+                <IconButton icon="gear" label="Settings" onClick={() => setModal("settings")} />
+              </span>
+              <span className="md:hidden">
+                <IconButton icon="info" label="About and privacy" onClick={() => setModal("info")} />
+              </span>
               {themeButton}
+              <button onClick={() => loadEmails()} disabled={loading} className={cx(btn.primary, "ml-2")}>
+                <Icon name="refresh" className={cx("h-4 w-4", loading && "animate-spin")} />
+                <span className="hidden sm:inline">{loading ? "Checking…" : "Refresh"}</span>
+              </button>
             </div>
           </div>
+        </header>
 
+        <div className="mx-auto max-w-5xl px-4 pt-6 pb-28 sm:px-8">
           {needsReconnect && (
-            <Banner icon="alert">
+            <Banner kind="warning">
               <span className="mr-2">Your Gmail connection expired (Google only allows about an hour at a time).</span>
-              <button onClick={reconnect} className="font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+              <button onClick={reconnect} className="font-semibold underline underline-offset-2">
                 Reconnect Gmail
               </button>
             </Banner>
           )}
           {error && (
-            <Banner icon="alert" onClose={() => setError("")}>
+            <Banner kind="danger" onClose={() => setError("")}>
               {error}
             </Banner>
           )}
           {notice && (
-            <Banner icon="check" onClose={() => setNotice("")}>
+            <Banner kind="success" onClose={() => setNotice("")}>
               {notice}
             </Banner>
           )}
+          {stats.phishing > 0 && (
+            <Banner kind="danger">
+              <strong>{stats.phishing}</strong> email{stats.phishing === 1 ? " has" : "s have"} phishing warning signs. Don't
+              click their links or share passwords.
+            </Banner>
+          )}
 
-          <div
-            className="mb-5 inline-flex max-w-full gap-1 overflow-x-auto rounded-lg bg-slate-100 p-1 dark:bg-slate-800/70"
-            role="tablist"
-          >
-            {["all", ...LABELS].map((key) => (
-              <button
-                key={key}
-                role="tab"
-                aria-selected={filter === key}
-                onClick={() => setFilter(key)}
-                className={cx(
-                  "whitespace-nowrap rounded-md px-3 py-1.5 text-sm transition",
-                  filter === key
-                    ? "bg-white font-medium text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white"
-                    : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-                )}
-              >
-                {key === "all" ? "All" : LABEL_STYLES[key].short}
-                <span className="ml-1.5 tabular-nums text-slate-400">{counts[key]}</span>
-              </button>
-            ))}
+          <StatCards stats={stats} filter={filter} onFilter={setFilter} />
+
+          <div className="mt-8 mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-semibold text-slate-900 dark:text-white">{filterName}</h2>
+              <p className={cx("text-xs", muted)}>
+                {visible.length} shown · {user.preferences.sensitivity} sensitivity
+              </p>
+            </div>
+            <div className="relative w-full sm:w-72">
+              <Icon name="search" className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search sender or subject"
+                className={cx(input, "pl-9")}
+                aria-label="Search emails"
+              />
+            </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             {visible.map((email) => (
               <EmailCard key={email.id} email={email} busy={Boolean(busyIds[email.id])} onAction={handleAction} />
             ))}
             {!loading && visible.length === 0 && (
-              <div className={cx("rounded-xl border border-dashed border-slate-200 p-12 text-center text-sm dark:border-slate-800", muted)}>
-                {emails.length === 0 ? "No unread emails in your inbox. Nice!" : "No emails in this category."}
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-white/50 px-6 py-14 text-center dark:border-slate-700 dark:bg-slate-900/40">
+                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
+                  <Icon name="check" className="h-6 w-6" />
+                </span>
+                <p className="mt-3 font-medium text-slate-900 dark:text-white">
+                  {emails.length === 0 ? "Inbox zero - no unread emails" : "Nothing matches"}
+                </p>
+                <p className={cx("mt-1 text-sm", muted)}>
+                  {emails.length === 0 ? "Click Refresh to check again." : "Try another filter or search."}
+                </p>
               </div>
             )}
-            {loading && emails.length === 0 &&
+            {loading &&
+              emails.length === 0 &&
               [0, 1, 2].map((i) => (
-                <div key={i} className="h-44 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-900" />
+                <div key={i} className="h-48 animate-pulse rounded-2xl border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900" />
               ))}
           </div>
         </div>

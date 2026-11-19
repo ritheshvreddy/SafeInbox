@@ -100,7 +100,7 @@ export default function InfoModal({ signedIn, retentionDays = 30, onClose, onAcc
             <button onClick={exportData} disabled={busy} className={btn.secondary}>
               <Icon name="download" /> Download my data
             </button>
-            <button onClick={deleteAccount} disabled={busy} className={btn.ghost}>
+            <button onClick={deleteAccount} disabled={busy} className={btn.danger}>
               <Icon name="trash" /> Delete my account and data
             </button>
           </section>

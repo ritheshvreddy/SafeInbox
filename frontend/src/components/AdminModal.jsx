@@ -1,14 +1,27 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../api";
 import { formatDate, percent } from "../labels";
-import { btn, cx, muted, notice } from "../ui";
+import { box, btn, cx, muted } from "../ui";
+import Icon from "./Icon";
 import Modal from "./Modal";
 
-function Tile({ label, value }) {
+const TINTS = {
+  indigo: "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400",
+  rose: "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400",
+  amber: "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400",
+  emerald: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400",
+  slate: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+};
+const JOB_TONES = { succeeded: "success", running: "info", rejected: "warning", failed: "danger" };
+
+function Tile({ label, value, icon, tint }) {
   return (
-    <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
+    <div className="rounded-xl border border-slate-200/80 p-3 dark:border-slate-800">
+      <span className={cx("flex h-7 w-7 items-center justify-center rounded-lg", TINTS[tint])}>
+        <Icon name={icon} className="h-3.5 w-3.5" />
+      </span>
+      <div className="mt-2 text-xl font-semibold tabular-nums text-slate-900 dark:text-white">{value}</div>
       <div className={cx("text-xs", muted)}>{label}</div>
-      <div className="mt-0.5 text-xl font-semibold tabular-nums text-slate-900 dark:text-white">{value}</div>
     </div>
   );
 }
@@ -73,14 +86,14 @@ export default function AdminModal({ onClose, onModelChanged }) {
       {stats && (
         <div className="space-y-6 text-sm">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Tile label="Users" value={stats.users} />
-            <Tile label="Analysed emails" value={stats.analysedEmails} />
-            <Tile label="Model says spam" value={stats.modelSpam} />
-            <Tile label="Phishing warnings" value={stats.phishing} />
-            <Tile label="Reported as spam" value={stats.feedback.spam} />
-            <Tile label="Marked not spam" value={stats.feedback.notSpam} />
-            <Tile label="Deleted" value={stats.actions.deleted} />
-            <Tile label="Database" value={stats.database === "mongodb" ? "MongoDB" : "In-memory"} />
+            <Tile label="Users" value={stats.users} icon="user" tint="indigo" />
+            <Tile label="Analysed emails" value={stats.analysedEmails} icon="mail" tint="indigo" />
+            <Tile label="Model says spam" value={stats.modelSpam} icon="flag" tint="rose" />
+            <Tile label="Phishing warnings" value={stats.phishing} icon="alert" tint="rose" />
+            <Tile label="Reported as spam" value={stats.feedback.spam} icon="flag" tint="amber" />
+            <Tile label="Marked not spam" value={stats.feedback.notSpam} icon="thumbsUp" tint="emerald" />
+            <Tile label="Deleted" value={stats.actions.deleted} icon="trash" tint="slate" />
+            <Tile label="Database" value={stats.database === "mongodb" ? "MongoDB" : "In-memory"} icon="chart" tint="slate" />
           </div>
 
           <section>
@@ -99,9 +112,9 @@ export default function AdminModal({ onClose, onModelChanged }) {
               Retraining runs in the background. A new model is only used if it keeps accuracy above 90%.
             </p>
             {job && job.status !== "idle" && (
-              <div className={cx(notice, "mt-3")}>
-                <span className="font-medium capitalize text-slate-900 dark:text-white">{job.status}</span>: {job.message}
-                {job.finishedAt && <span className={cx("block text-xs", muted)}>Finished {formatDate(job.finishedAt)}</span>}
+              <div className={cx(box(JOB_TONES[job.status] || "info"), "mt-3")}>
+                <span className="font-semibold capitalize">{job.status}</span>: {job.message}
+                {job.finishedAt && <span className="block text-xs opacity-75">Finished {formatDate(job.finishedAt)}</span>}
               </div>
             )}
             <div className="mt-4 flex flex-wrap gap-2">

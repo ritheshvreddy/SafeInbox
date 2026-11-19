@@ -50,7 +50,7 @@ export default function ChatPanel({ onRefresh, onPreferencesChanged }) {
       <button
         onClick={() => setOpen(true)}
         aria-label="Ask SafeInbox"
-        className={cx(btn.primary, "fixed right-4 bottom-4 z-40 rounded-full p-3.5 shadow-lg sm:px-4 sm:py-3")}
+        className={cx(btn.primary, "fixed right-5 bottom-5 z-40 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 p-3.5 shadow-lg shadow-indigo-600/30 sm:px-5 sm:py-3")}
       >
         <Icon name="chat" className="h-5 w-5" />
         <span className="hidden sm:inline">Ask SafeInbox</span>
@@ -63,11 +63,21 @@ export default function ChatPanel({ onRefresh, onPreferencesChanged }) {
       className="fixed inset-x-2 bottom-2 z-40 flex h-[70vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900 sm:inset-x-auto sm:right-4 sm:bottom-4 sm:h-[520px] sm:w-[380px]"
       aria-label="SafeInbox assistant"
     >
-      <header className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-slate-800">
-        <span className="flex items-center gap-2 font-medium text-slate-900 dark:text-white">
-          <Icon name="chat" className="h-4 w-4 text-indigo-600 dark:text-indigo-400" /> Assistant
+      <header className="flex items-center justify-between bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3 text-white">
+        <span className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
+            <Icon name="chat" className="h-4 w-4" />
+          </span>
+          <span>
+            <span className="block text-sm font-semibold">SafeInbox assistant</span>
+            <span className="block text-xs text-indigo-100">Ask about your unread emails</span>
+          </span>
         </span>
-        <button onClick={() => setOpen(false)} className={btn.icon} aria-label="Close chat">
+        <button
+          onClick={() => setOpen(false)}
+          className="rounded-lg p-1.5 text-white/80 transition hover:bg-white/15 hover:text-white"
+          aria-label="Close chat"
+        >
           <Icon name="close" className="h-5 w-5" />
         </button>
       </header>

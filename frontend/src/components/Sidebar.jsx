@@ -1,75 +1,81 @@
-import { ACTION_TEXT, LABEL_STYLES, formatDate } from "../labels";
+import { ACTION_TEXT, LABEL_STYLES, formatDate, initialOf } from "../labels";
 import { btn, cx, label, muted } from "../ui";
 import Icon from "./Icon";
 import Logo from "./Logo";
-import SpamChart from "./SpamChart";
 
-export default function Sidebar({ user, stats, history, onLogout, onOpenAdmin, onSelectHistory }) {
-  const initial = (user.name || user.email || "?").trim().charAt(0).toUpperCase();
-
+function NavItem({ icon, children, active, onClick, count }) {
   return (
-    <aside className="flex flex-col gap-5 border-b border-slate-200 bg-white px-5 py-5 dark:border-slate-800 dark:bg-slate-900 md:sticky md:top-0 md:h-screen md:w-72 md:shrink-0 md:gap-8 md:overflow-y-auto md:border-r md:border-b-0 md:py-6">
-      <Logo size={32} nameClassName="text-lg" />
-
-      <section>
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-50 font-semibold text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">
-            {initial}
-          </span>
-          <div className="min-w-0">
-            <p className="flex items-center gap-2 truncate font-medium text-slate-900 dark:text-white">
-              <span className="truncate">{user.name}</span>
-              {user.role === "admin" && (
-                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                  Admin
-                </span>
-              )}
-            </p>
-            <p className={cx("truncate text-xs", muted)}>{user.email}</p>
-          </div>
-        </div>
-        <div className="mt-3 flex gap-1">
-          <button onClick={onLogout} className={cx(btn.ghost, "-ml-3")}>
-            <Icon name="logout" /> Log out
-          </button>
-          {user.role === "admin" && (
-            <button onClick={onOpenAdmin} className={btn.ghost}>
-              <Icon name="chart" /> Admin
-            </button>
+    <button
+      onClick={onClick}
+      className={cx(
+        "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition",
+        active
+          ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300"
+          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+      )}
+    >
+      <Icon name={icon} className="h-[18px] w-[18px]" />
+      <span className="flex-1 text-left">{children}</span>
+      {count !== undefined && (
+        <span
+          className={cx(
+            "rounded-full px-2 py-0.5 text-xs tabular-nums",
+            active ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
           )}
-        </div>
-      </section>
+        >
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
 
-      {/* On phones the filter tabs already show the counts, so the chart and history only appear on larger screens. */}
-      <section className="hidden md:block">
-        <h2 className={cx(label, "mb-3")}>Overview</h2>
-        <SpamChart stats={stats} />
-      </section>
+export default function Sidebar({ user, unread, history, onLogout, onOpenAdmin, onOpenSettings, onOpenInfo, onSelectHistory }) {
+  return (
+    <aside className="flex flex-col border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 md:sticky md:top-0 md:h-screen md:w-64 md:shrink-0 md:border-r md:border-b-0">
+      <div className="flex items-center justify-between px-5 py-4 md:py-5">
+        <Logo size={30} nameClassName="text-lg" />
+        <button onClick={onLogout} className={cx(btn.icon, "md:hidden")} aria-label="Log out" title="Log out">
+          <Icon name="logout" className="h-5 w-5" />
+        </button>
+      </div>
 
-      <section className="hidden min-h-0 md:block">
-        <h2 className={cx(label, "mb-2")}>Previous mails</h2>
+      <nav className="hidden space-y-1 px-3 md:block">
+        <NavItem icon="mail" active count={unread}>
+          Inbox
+        </NavItem>
+        <NavItem icon="gear" onClick={onOpenSettings}>
+          Settings
+        </NavItem>
+        <NavItem icon="info" onClick={onOpenInfo}>
+          About &amp; privacy
+        </NavItem>
+        {user.role === "admin" && (
+          <NavItem icon="chart" onClick={onOpenAdmin}>
+            Admin
+          </NavItem>
+        )}
+      </nav>
+
+      <section className="hidden min-h-0 flex-1 overflow-y-auto px-5 pt-8 md:block">
+        <h2 className={cx(label, "mb-2")}>Recent activity</h2>
         {history.length === 0 ? (
           <p className={cx("text-sm", muted)}>Emails you've checked will appear here.</p>
         ) : (
-          <ul className="-mx-2 max-h-72 space-y-0.5 overflow-y-auto md:max-h-none">
+          <ul className="-mx-2 space-y-0.5">
             {history.map((item) => (
               <li key={item.id}>
                 <button
                   onClick={() => onSelectHistory(item)}
-                  className="w-full rounded-lg px-2 py-2 text-left transition hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                  className="w-full rounded-lg px-2 py-1.5 text-left transition hover:bg-slate-50 dark:hover:bg-slate-800/60"
                   title={formatDate(item.analyzedAt)}
                 >
                   <span className="flex items-center gap-2">
-                    <span
-                      className="h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: LABEL_STYLES[item.label]?.color }}
-                    />
+                    <span className={cx("h-2 w-2 shrink-0 rounded-full", LABEL_STYLES[item.label]?.dot)} />
                     <span className="truncate text-sm text-slate-700 dark:text-slate-200">{item.subject}</span>
                   </span>
-                  <span className={cx("block truncate pl-3.5 text-xs", muted)}>
-                    {item.userAction ? ACTION_TEXT[item.userAction] : item.label}
-                    {" · "}
-                    {item.senderName || item.from}
+                  <span className={cx("block truncate pl-4 text-xs", muted)}>
+                    {item.userAction ? ACTION_TEXT[item.userAction] : item.label} · {item.senderName || item.from}
                   </span>
                 </button>
               </li>
@@ -77,6 +83,19 @@ export default function Sidebar({ user, stats, history, onLogout, onOpenAdmin, o
           </ul>
         )}
       </section>
+
+      <div className="hidden items-center gap-3 border-t border-slate-200 px-4 py-4 dark:border-slate-800 md:flex">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-sm font-semibold text-white">
+          {initialOf(user.name || user.email)}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-slate-900 dark:text-white">{user.name}</p>
+          <p className={cx("truncate text-xs", muted)}>{user.email}</p>
+        </div>
+        <button onClick={onLogout} className={btn.icon} aria-label="Log out" title="Log out">
+          <Icon name="logout" className="h-[18px] w-[18px]" />
+        </button>
+      </div>
     </aside>
   );
 }

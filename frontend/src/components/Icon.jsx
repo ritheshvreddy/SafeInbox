@@ -21,6 +21,8 @@ const PATHS = {
   download: "M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4 M7 10l5 5 5-5 M12 15V3",
   chart: "M18 20V10 M12 20V4 M6 20v-6",
   eye: "M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z M12 15a3 3 0 100-6 3 3 0 000 6z",
+  search: "M11 19a8 8 0 100-16 8 8 0 000 16z M21 21l-4.35-4.35",
+  lock: "M5 11h14a2 2 0 012 2v7a2 2 0 01-2 2H5a2 2 0 01-2-2v-7a2 2 0 012-2z M7 11V7a5 5 0 0110 0v4",
 };
 
 export default function Icon({ name, className = "h-4 w-4", title }) {
