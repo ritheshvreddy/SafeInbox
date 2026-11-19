@@ -1,8 +1,30 @@
 # SafeInbox
 
+<p align="center"><img src="frontend/public/og-image.png" alt="SafeInbox - AI spam & phishing checker for your Gmail inbox" width="720"></p>
+
+**Live app: [safe-inbox.vercel.app](https://safe-inbox.vercel.app)** · [Privacy Policy](https://safe-inbox.vercel.app/privacy) · [Terms](https://safe-inbox.vercel.app/terms)
+
 SafeInbox is a web dashboard that connects to Gmail, scans your **unread** emails and tells you which ones to read and which to ignore. Every email gets a spam score, a type (*likely safe / suspicious / likely spam*), a short summary, the reasons behind the decision, and phishing warnings for dangerous-looking links. You can mark emails as read, delete them, report spam or mark them as not spam directly from the dashboard, or ask the built-in assistant questions such as *"summary"* or *"any phishing?"*.
 
-**Stack:** React (Vite, Tailwind CSS) · Flask · MongoDB · scikit-learn (TF-IDF + Naive Bayes) · sumy/NLTK (TextRank) · Gmail API with Google OAuth 2.0 · Docker · Jenkins
+**Stack:** React (Vite, Tailwind CSS) · Flask · MongoDB · scikit-learn (TF-IDF + Naive Bayes) · sumy/NLTK (TextRank) · Gmail API with Google OAuth 2.0 · Docker · Jenkins · Vercel · Render · MongoDB Atlas
+
+## Try it
+
+1. Open **https://safe-inbox.vercel.app** and click **Login with Gmail**.
+2. Google shows **"Google hasn't verified this app"**. That's expected: SafeInbox is a student project that hasn't been through Google's paid app review. Click **Advanced → Go to safe-inbox.vercel.app (unsafe)**.
+3. Tick the box that lets SafeInbox **read and change your Gmail**, then click **Continue**.
+4. Your unread emails load with spam scores, summaries and phishing warnings.
+
+Good to know:
+- **Slow first visit**: the backend runs on Render's free plan and sleeps after 15 minutes without visitors. The first visit afterwards takes up to a minute ("Starting the server…").
+- **100-account limit**: unverified apps that read Gmail are limited by Google to 100 accounts in total.
+- **Your data**: SafeInbox only changes your mailbox when you click a button. Stored data is encrypted and deleted after 30 days. You can download or delete it any time from the ⓘ menu.
+
+| Part | Hosted at |
+|---|---|
+| Frontend | https://safe-inbox.vercel.app (Vercel) |
+| Backend API | https://safeinbox-backend.onrender.com (Render) — try [`/api/health`](https://safeinbox-backend.onrender.com/api/health) |
+| Database | MongoDB Atlas (M0, Mumbai) |
 
 ---
 
@@ -136,7 +158,8 @@ The browser loads the site from Vercel and calls the backend on Render directly.
 **1. MongoDB Atlas.** Create a free **M0** cluster (pick a region near your Render region, e.g. Mumbai or Singapore):
 - **Database Access**: add a database user.
 - **Network Access**: allow `0.0.0.0/0` (Render's addresses change).
-- **Connect → Drivers**: copy the connection string and add `/safeinbox` before the `?`, e.g. `mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/safeinbox?retryWrites=true&w=majority`.
+- **Connect → Drivers**: copy the connection string. **Replace `<db_password>` with the real password** and add `/safeinbox` before the `?`, e.g. `mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/safeinbox?retryWrites=true&w=majority`.
+- If connections fail with `SSL handshake failed` / `TLSV1_ALERT_INTERNAL_ERROR`, the caller's IP isn't on the access list (step 2).
 
 **2. Render (backend).** **New → Blueprint** → connect the GitHub repository; Render reads `render.yaml`. Fill in:
 
@@ -145,12 +168,12 @@ The browser loads the site from Vercel and calls the backend on Render directly.
 | `MONGO_URI` | Atlas connection string from step 1 |
 | `GOOGLE_CLIENT_ID` | your OAuth client ID |
 | `ADMIN_EMAILS` | your Gmail address |
-| `CORS_ORIGINS` | your Vercel address from step 3, e.g. `https://safeinbox.vercel.app` (you can edit this after step 3) |
+| `CORS_ORIGINS` | your Vercel address from step 3, e.g. `https://safe-inbox.vercel.app`, **without a trailing `/`** (you can edit this after step 3) |
 | `DATA_ENCRYPTION_KEY` | output of `python -c "import base64,os;print(base64.urlsafe_b64encode(os.urandom(32)).decode())"`. **Keep a copy.** |
 
 After the deploy, `https://<your-service>.onrender.com/api/health` should show `"database":"mongodb"`.
 
-**3. Vercel (frontend).** **Add New → Project** → import the GitHub repository, then set:
+**3. Vercel (frontend).** **Add New → Project** → import the GitHub repository. Vercel detects both apps; on the **frontend** (Vite) row choose **Import single project**. The backend runs on Render, not Vercel. Then set:
 - **Root Directory**: `frontend`
 - **Environment Variables**:
   - `VITE_GOOGLE_CLIENT_ID`: your client ID
@@ -166,7 +189,8 @@ Deploy. Then put the Vercel address into Render's `CORS_ORIGINS` if you haven't 
   - Privacy policy: `https://<your-app>.vercel.app/privacy`
   - Terms of service: `https://<your-app>.vercel.app/terms`
   - Authorized domains: `<your-app>.vercel.app`
-- **Audience → Publish app**. Because Gmail access is a restricted scope and the app is unverified, users see an "unverified app" screen (*Advanced → Go to SafeInbox*), and at most 100 users can sign up.
+  - **Leave App logo empty.** A logo requires Google verification, which for Gmail scopes includes a paid security assessment.
+- **Audience → Publish app**. Because Gmail access is a restricted scope and the app is unverified, users see "Google hasn't verified this app" and continue with *Advanced → Go to &lt;your-app&gt;.vercel.app (unsafe)*. At most 100 accounts can ever sign in. The login page explains these steps to users.
 
 Both Vercel and Render redeploy automatically on every push to `main`. To make the public site update **only after Jenkins tests pass**:
 1. Turn off auto-deploy in Render (Settings → Auto-Deploy: *No*) and in Vercel (Settings → Git → Ignored Build Step: *Don't build anything*, or disconnect Git).

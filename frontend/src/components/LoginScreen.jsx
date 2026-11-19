@@ -53,6 +53,17 @@ export default function LoginScreen({ onLogin, busy, error, retentionDays, serve
           <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>
         )}
 
+        <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+          <p className="flex items-center gap-2 font-semibold">
+            <Icon name="alert" /> Seeing "Google hasn't verified this app"?
+          </p>
+          <p className="mt-1 leading-6">
+            That's expected - SafeInbox is a student project that hasn't been through Google's paid app review. Click{" "}
+            <strong>Advanced</strong>, then <strong>Go to {window.location.host} (unsafe)</strong>, and tick the box that
+            lets SafeInbox read and change your Gmail.
+          </p>
+        </div>
+
         <p className="mt-6 text-xs leading-5 text-slate-500 dark:text-slate-400">
           By signing in you allow SafeInbox to read your unread Gmail emails and to mark, move or delete them when you
           click the buttons. Email content is stored encrypted (AES-256), deleted automatically after {retentionDays} days,
