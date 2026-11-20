@@ -65,7 +65,7 @@ export default function InfoModal({ signedIn, retentionDays = 30, onClose, onAcc
           <ol className="list-decimal space-y-1 pl-5">
             <li>Unread inbox emails are fetched through the Gmail API with your permission (OAuth 2.0).</li>
             <li>Each email is cleaned: HTML tags, quoted replies and signatures are removed.</li>
-            <li>A Naive Bayes classifier with TF-IDF features estimates how likely it is to be spam.</li>
+            <li>A logistic regression classifier with TF-IDF features estimates how likely it is to be spam.</li>
             <li>
               The score is adjusted using the sender: senders you trusted or reported, and Gmail's SPF/DKIM/DMARC checks.
               Links are checked for phishing tricks.

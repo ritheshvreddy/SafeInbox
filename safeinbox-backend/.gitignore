@@ -28,3 +28,6 @@ dist-ssr
 # Generated keys and retrained models
 instance/
 .pytest_cache/
+
+# Downloads made by build_dataset.py
+.dataset-cache/

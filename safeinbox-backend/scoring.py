@@ -1,6 +1,6 @@
 """Confidence Scoring Module (SDD Appendix B: CALCULATE_SPAM_SCORE(spam_probability, email_text, sender_info)).
 
-Combines the Naive Bayes probability with sender information (the user's trusted/blocked
+Combines the model's spam probability with sender information (the user's trusted/blocked
 senders and Gmail's SPF/DKIM/DMARC results) and phishing findings, then maps the final score
 to a classification type using the user's chosen spam sensitivity.
 """

@@ -19,3 +19,7 @@ Thumbs.db
 .git
 .gitignore
 *.log
+
+# Dataset build inputs (the image only needs email_dataset.csv.gz)
+.dataset-cache/
+spam_ham_dataset.csv

@@ -1,4 +1,7 @@
-"""Spam Classification Module: TF-IDF + Naive Bayes, with per-word explanations.
+"""Spam Classification Module: TF-IDF + a linear classifier, with per-word explanations.
+
+New models use logistic regression (see training.py). Older Naive Bayes models, which may still
+be stored in MongoDB, keep working.
 
 The active model can be replaced at runtime by a retrained one (see training.py). Retrained
 models live in MongoDB, so every server process picks up a new model.
@@ -41,8 +44,11 @@ class SpamModel:
         self._spam_index = classes.index(1)
         ham_index = classes.index(0)
         self._feature_names = vectorizer.get_feature_names_out()
-        # log P(word | spam) - log P(word | not spam): positive means the word points towards spam.
-        self._word_weight = classifier.feature_log_prob_[self._spam_index] - classifier.feature_log_prob_[ham_index]
+        # Per-word weight: positive means the word points towards spam.
+        if hasattr(classifier, "feature_log_prob_"):  # Naive Bayes: log P(word | spam) - log P(word | not spam)
+            self._word_weight = classifier.feature_log_prob_[self._spam_index] - classifier.feature_log_prob_[ham_index]
+        else:  # logistic regression: the coefficient pushes towards classes_[1]
+            self._word_weight = classifier.coef_[0] if self._spam_index == 1 else -classifier.coef_[0]
 
     def analyze(self, text: str, top_n: int = 5) -> dict:
         vector = self.vectorizer.transform([clean_for_model(text)])

@@ -69,7 +69,7 @@ def load_config(overrides=None):
         "CORS_ORIGINS": _list(os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000")),
         "SESSION_MAX_AGE_SECONDS": int(os.getenv("SESSION_MAX_AGE_SECONDS", 8 * 3600)),
         "DATA_RETENTION_DAYS": int(os.getenv("DATA_RETENTION_DAYS", 30)),
-        "DATASET_PATH": Path(os.getenv("DATASET_PATH", BASE_DIR / "spam_ham_dataset.csv")),
+        "DATASET_PATH": Path(os.getenv("DATASET_PATH", BASE_DIR / "email_dataset.csv.gz")),
         "BASE_MODEL_DIR": BASE_DIR,
         "MIN_RETRAIN_ACCURACY": float(os.getenv("MIN_RETRAIN_ACCURACY", 0.90)),
         "FEEDBACK_WEIGHT": float(os.getenv("FEEDBACK_WEIGHT", 5)),

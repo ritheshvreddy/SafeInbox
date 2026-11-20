@@ -6,7 +6,7 @@
 
 SafeInbox is a web dashboard that connects to Gmail, scans your **unread** emails and tells you which ones to read and which to ignore. Every email gets a spam score, a type (*likely safe / suspicious / likely spam*), a short summary, the reasons behind the decision, and phishing warnings for dangerous-looking links. You can mark emails as read, delete them, report spam or mark them as not spam directly from the dashboard, or ask the built-in assistant questions such as *"summary"* or *"any phishing?"*.
 
-**Stack:** React (Vite, Tailwind CSS) · Flask · MongoDB · scikit-learn (TF-IDF + Naive Bayes) · sumy/NLTK (TextRank) · Gmail API with Google OAuth 2.0 · Docker · Jenkins · Vercel · Render · MongoDB Atlas
+**Stack:** React (Vite, Tailwind CSS) · Flask · MongoDB · scikit-learn (TF-IDF + logistic regression) · sumy/NLTK (TextRank) · Gmail API with Google OAuth 2.0 · Docker · Jenkins · Vercel · Render · MongoDB Atlas
 
 ## Try it
 
@@ -50,7 +50,7 @@ Good to know:
 - **Sign in with Gmail** (Google OAuth 2.0). The first sign-in registers the account; sessions survive page reloads.
 - **Unread inbox scan**: fetches up to 10/25/50 unread inbox emails (your choice).
 - **Preprocessing**: decodes the email, strips HTML, quoted replies and signatures.
-- **Spam classification**: TF-IDF + Multinomial Naive Bayes, **95.3 % accuracy** on 1,035 held-out test emails.
+- **Spam classification**: TF-IDF + logistic regression trained on ~40,000 emails from five sources (Enron, SpamAssassin, two phishing corpora and hand-written modern emails, see `build_dataset.py`). **98.5 % accuracy** on 7,942 held-out test emails and **94.2 %** on 120 separately written modern emails (`tests/data/modern_test_emails.jsonl`), where the previous Enron-only model scored 63 %.
 - **Confidence scoring**: combines the model with sender information: senders you trusted or reported, and Gmail's SPF/DKIM/DMARC results.
 - **Customizable sensitivity**: low / medium / high.
 - **Explanations**: the words that pushed the score up or down, and every sender/phishing signal.
@@ -70,7 +70,7 @@ Good to know:
 Browser (React)  ──/api──►  Flask backend  ──►  Gmail API (OAuth 2.0 access token, stored encrypted)
    │  Google Identity          │
    │  Services popup           ├─ preprocessing.py  clean text, links, sender, SPF/DKIM/DMARC
-   │                           ├─ classifier.py     TF-IDF + Naive Bayes (+ per-word explanation)
+   │                           ├─ classifier.py     TF-IDF + logistic regression (+ per-word explanation)
    │                           ├─ scoring.py        CALCULATE_SPAM_SCORE(probability, text, sender info)
    │                           ├─ phishing.py       link + sender checks
    │                           ├─ summarizer.py     TextRank summary
@@ -312,8 +312,9 @@ All endpoints except health/check need `Authorization: Bearer <session token>`.
     ├── services.py             analysis pipeline, caching, serialisation
     ├── preprocessing.py · classifier.py · scoring.py · phishing.py · summarizer.py · chatbot.py
     ├── training.py · TrainModel.py   background retraining · rebuild the base model
+    ├── build_dataset.py        builds email_dataset.csv.gz from the public corpora + modern_emails.jsonl
     ├── encryption.py · db.py · config.py · gmail_client.py
-    ├── spam_classifier.pkl · tfidf_vectorizer.pkl · spam_ham_dataset.csv
+    ├── spam_classifier.pkl · tfidf_vectorizer.pkl · email_dataset.csv.gz · modern_emails.jsonl
     └── tests/                  pytest suite
 ```
 
@@ -324,7 +325,7 @@ All endpoints except health/check need `Authorization: Bearer <session token>`.
 | F1 User authentication, register/login, sessions, preferences | `auth.py`, `routes.py` (`/api/auth/*`, `/api/preferences`) |
 | Role-based access control | `auth.py` (`admin_required`), `ADMIN_EMAILS` |
 | F2 Fetch unread emails + preprocessing (HTML, signatures) | `gmail_client.py`, `preprocessing.py` |
-| F3 Naive Bayes + TF-IDF spam probability, >90 % accuracy | `classifier.py`, measured 95.3 % |
+| F3 Naive Bayes + TF-IDF spam probability, >90 % accuracy | `classifier.py`, `training.py`: measured 98.5 % (94.2 % on modern emails). Deviation: logistic regression replaced Naive Bayes, which reached 97.2 % / 91.7 % on the same data with more false alarms |
 | Confidence scoring & types (likely safe / suspicious / spam), sender info | `scoring.py` |
 | F4 Extractive summarization (TextRank), user-set length | `summarizer.py` |
 | F5 Mark as read, delete, keep, report | `routes.py` `/api/emails/<id>/action` |

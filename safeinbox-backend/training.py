@@ -1,21 +1,24 @@
 """Spam model (re)training - runs in a background thread (SRS 3.1 Performance: background processing).
 
-The model is trained on the original dataset plus emails users reported as spam / marked as
-not spam. A new model only replaces the current one if it still meets the >90% accuracy
-requirement (SRS 6.1) on held-out test emails.
+The model is TF-IDF + logistic regression, trained on email_dataset.csv.gz (built by
+build_dataset.py from several public corpora plus modern examples) and, when enabled, emails
+users reported as spam / marked as not spam. A new model only replaces the current one if it
+still meets the >90% accuracy requirement (SRS 6.1) on held-out test emails.
 """
 import csv
+import gzip
 import logging
 import sys
 import threading
 import traceback
 from datetime import datetime, timedelta, timezone
 
+import numpy as np
 from pymongo.errors import DuplicateKeyError
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from sklearn.model_selection import train_test_split
-from sklearn.naive_bayes import MultinomialNB
 
 from classifier import clean_for_model
 
@@ -30,10 +33,12 @@ def utcnow():
 
 
 def load_dataset(path):
-    """Read the labelled dataset (columns: text + label_num, or text + label ham/spam)."""
+    """Read the labelled dataset (.csv or .csv.gz; columns: text + label_num, or text + label ham/spam,
+    plus an optional weight column). Returns (texts, labels, weights)."""
     csv.field_size_limit(min(sys.maxsize, 2**31 - 1))
-    texts, labels = [], []
-    with open(path, newline="", encoding="utf-8", errors="replace") as handle:
+    texts, labels, weights = [], [], []
+    opener = gzip.open if str(path).endswith(".gz") else open
+    with opener(path, "rt", newline="", encoding="utf-8", errors="replace") as handle:
         for row in csv.DictReader(handle):
             text = row.get("text") or ""
             if (row.get("label_num") or "").strip() in {"0", "1"}:
@@ -43,23 +48,32 @@ def load_dataset(path):
             if text.strip():
                 texts.append(text)
                 labels.append(label)
-    return texts, labels
+                weights.append(float(row.get("weight") or 1))
+    return texts, labels, weights
 
 
-def train(texts, labels, feedback_texts=(), feedback_labels=(), feedback_weight=5.0, test_size=0.2, seed=42):
-    """Train TF-IDF + Multinomial Naive Bayes. Feedback emails count `feedback_weight` times."""
+def train(texts, labels, feedback_texts=(), feedback_labels=(), feedback_weight=5.0, test_size=0.2, seed=42,
+          weights=None):
+    """Train TF-IDF + logistic regression. Dataset emails count `weights[i]` times (default 1) and
+    feedback emails `feedback_weight` times.
+
+    Logistic regression beat Naive Bayes on emails from sources it was not trained on, and its
+    probabilities are less extreme, which suits the Suspicious / Likely spam thresholds.
+    """
     cleaned = [clean_for_model(t) for t in texts]
-    x_train, x_test, y_train, y_test = train_test_split(
-        cleaned, labels, test_size=test_size, random_state=seed, stratify=labels
+    weights = list(weights) if weights is not None else [1.0] * len(cleaned)
+    x_train, x_test, y_train, y_test, w_train, _ = train_test_split(
+        cleaned, labels, weights, test_size=test_size, random_state=seed, stratify=labels
     )
     feedback_clean = [clean_for_model(t) for t in feedback_texts]
     train_texts = list(x_train) + feedback_clean
     train_labels = list(y_train) + list(feedback_labels)
-    weights = [1.0] * len(x_train) + [float(feedback_weight)] * len(feedback_clean)
+    train_weights = list(w_train) + [float(feedback_weight)] * len(feedback_clean)
 
-    vectorizer = TfidfVectorizer(max_features=5000)
-    classifier = MultinomialNB()
-    classifier.fit(vectorizer.fit_transform(train_texts), train_labels, sample_weight=weights)
+    vectorizer = TfidfVectorizer(max_features=30000, min_df=2, max_df=0.9, sublinear_tf=True, dtype=np.float32)
+    classifier = LogisticRegression(C=10, class_weight="balanced", max_iter=3000)
+    classifier.fit(vectorizer.fit_transform(train_texts), train_labels, sample_weight=train_weights)
+    vectorizer.stop_words_ = None  # list of dropped rare words - only needed for inspection, and large
 
     predictions = classifier.predict(vectorizer.transform(x_test))
     metrics = {
@@ -98,7 +112,7 @@ def start_retraining(db, model_store, encryptor, config, requested_by, synchrono
 
 def _run(db, model_store, encryptor, config):
     try:
-        texts, labels = load_dataset(config["DATASET_PATH"])
+        texts, labels, weights = load_dataset(config["DATASET_PATH"])
         feedback_texts, feedback_labels = [], []
         for item in db.feedback.find({"text_enc": {"$exists": True}}, {"text_enc": 1, "label": 1}):
             try:
@@ -108,7 +122,7 @@ def _run(db, model_store, encryptor, config):
                 continue
 
         vectorizer, classifier, metrics = train(
-            texts, labels, feedback_texts, feedback_labels, feedback_weight=config["FEEDBACK_WEIGHT"]
+            texts, labels, feedback_texts, feedback_labels, feedback_weight=config["FEEDBACK_WEIGHT"], weights=weights
         )
         minimum = config["MIN_RETRAIN_ACCURACY"]
         if metrics["accuracy"] < minimum:
